@@ -23,17 +23,25 @@ The launch helper reads only `MODEL_API_KEY` from the host's ignored `.env`, wit
 
 Visit `http://127.0.0.1:3019/career-discovery`, paste synthetic résumé text, authorize the external request, answer, and create a draft when Muse has enough information. Correct it in the existing editor, check the review declaration, and choose **Mark as reviewed**. Keep outcome unknown unless the candidate actually establishes it. Source inspection retains the original transcript independently of editable notes.
 
-One new SQLite table stores serialized interview state, revision, notices and a draft link. The existing `career_evidence` schema is unchanged. It stores the resulting draft, approval status and immutable transcript snapshot. No second evidence database exists. Review is record-level. Explicit persisted rejection and claim-level answer tracing remain scheduled work.
+One new SQLite table stores serialized interview state, revision, notices and a draft link. The existing `career_evidence` schema is unchanged. It stores the resulting draft, approval status and immutable transcript snapshot. No second evidence database exists. Review is record-level. The host answer preview now carries ephemeral answer claims to reviewed evidence and immutable interview responses; the standalone engine validates exact record/revision/response identities and quoted source resolution. Semantic entailment remains a candidate review responsibility.
+
+The browser integration and strict output contract are implemented, but the live Muse answer step is not yet demonstrated: three bounded calls completed without a trace-valid answer, including a call with JSON object mode requested. The host intentionally discarded each result. The generic UI error does not distinguish JSON parsing, answer policy/format, and claim-source validation, and raw model output was not retained. Competition acceptance requires one successful real-model response with a resolvable claim, a visible source excerpt, and an unsupported qualification preserved as unresolved.
 
 To refresh the patch after host integration edits, first stage only the intended host code and run this explicit allowlist from the host root:
 
 ```sh
 git diff --cached --unified=0 c68051349c1d642b83c514a3377555afa9941542 -- \
-  go.mod internal/app/app.go internal/app/app_http.go \
-  internal/app/career_discovery.go internal/app/career_discovery_test.go \
-  internal/coverletter/provider/providers.go internal/coverletter/provider/meta_discovery_test.go \
-  templates/career_evidence.html templates/career_discovery.html \
-  scripts/run-discovery-demo.py > career-discovery/integration/yourmove.patch
+  .gitignore career-discovery.lock docs/BACKLOG.md \
+  docs/implementation/2026-10-26-career-discovery.md go.mod \
+  internal/app/ai_handlers.go internal/app/app.go internal/app/app_http.go \
+  internal/app/application_answer_ai.go internal/app/application_answer_ai_state.go \
+  internal/app/application_answer_ai_test.go internal/app/career_discovery.go \
+  internal/app/career_discovery_test.go \
+  internal/coverletter/provider/meta_discovery_test.go \
+  internal/coverletter/provider/providers.go internal/coverletter/provider/providers_test.go \
+  scripts/run-discovery-demo.py static/styles.css static/ui.js \
+  templates/ai.html templates/career_discovery.html templates/career_evidence.html \
+  templates/job.html > career-discovery/integration/yourmove.patch
 ```
 
 Check for deleted/context lines before publishing. Do not export the original app, its Git history, `.env`, local databases, unrelated backlog, or old source snapshots. Commit the generated patch in the engine repository; never edit it as a second implementation. Host application adapters remain authoritative in the host. The package remains authoritative in this repository.

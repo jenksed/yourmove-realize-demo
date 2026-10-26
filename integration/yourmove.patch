@@ -1,3 +1,123 @@
+diff --git a/.gitignore b/.gitignore
+index 6373e31..9d5989c 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -33,0 +34,3 @@ jobs.db-shm
++
++# Authoritative event-only module: independent repository, never vendor the host.
++/career-discovery/
+diff --git a/career-discovery.lock b/career-discovery.lock
+new file mode 100644
+index 0000000..f832230
+--- /dev/null
++++ b/career-discovery.lock
+@@ -0,0 +1 @@
++47717b0e12272a1c91ba56fb2c7af9b84d481a99
+diff --git a/docs/BACKLOG.md b/docs/BACKLOG.md
+index 036be81..0e83d13 100644
+--- a/docs/BACKLOG.md
++++ b/docs/BACKLOG.md
+@@ -15,0 +16,24 @@
++## Hackathon Career Discovery — independent execution
++
++<!-- Hackathon checkpoint is independent of the inherited release backlog below. -->
++
++### HACK-001 — Muse Career Discovery first vertical slice
++
++- **Priority:** P1 · **Stage:** hackathon B1 · **Status:** DONE for browser-hosted scope; native acceptance remains OPEN.
++- **Commits:** host `2465d18`; event-only engine `1858750f32d466852c9c7ffdf64e37387cd50813`; owner-requested AI Connections refinement `e753a0e`.
++- **Observed:** real synthetic Muse interview, incident-specific follow-up, source-linked proposal, existing editable evidence draft, explicit candidate review, process restart and retained source. Standalone Contributor CLI also exercised live. No job application submitted.
++- **Checks:** complete ordinary/desktop-tagged Go suites and module tests PASS; native build/signature verification PASS. New workflow native/narrow acceptance NOT VERIFIED.
++- **Evidence / handoff:** [October 26 checkpoint](implementation/2026-10-26-career-discovery.md), with the fresh repository's detailed assessment, metrics, screenshots, compliance checklist and schedule.
++- **Next bounded item:** reviewed evidence → one job-specific Muse answer → answer-claim source inspection, including an unsupported qualification. Durable reject/clarify, native acceptance and ten-scenario evaluation remain essential. Voice and second-question reuse remain optional.
++- **Compliance:** inherited host is not the submission; fresh event-only engine repository is authoritative. Organizer confirmation of the disclosed preexisting demo host / additions-only patch arrangement and final judge access remain pending. Protected release repository is independent.
++
++### HACK-002 — Career Evidence to job-specific answer trace
++
++- **Priority:** P1 · **Stage:** hackathon career discovery · **Status:** IMPLEMENTED / NEEDS LIVE VERIFICATION.
++- **Architecture:** Host adapter binds a candidate-reviewed Career Evidence revision to its immutable interview response; the standalone engine validates exact evidence/revision/response identities and quoted excerpts; the browser presents the answer and trace as an unsaved candidate review.
++- **Commits:** host pending on `feat/career-discovery-b1`; engine trace validator `47717b0e12272a1c91ba56fb2c7af9b84d481a99`; one-way engine integration snapshot in the current event-engine HEAD.
++- **Implemented checks:** standalone `go test -count=1 ./...`, focused trace and answer tests, provider JSON request contract, and full host `go test -count=1 ./...` PASS. Browser reached a real Percona MySQL question and reviewed synthetic Career Evidence ID 1 revision 2.
++- **Observed blocker:** three bounded real Muse Standard calls returned output rejected by host validation, including one JSON-object-mode request. No raw response was retained and the UI exposes one generic unusable-output notice, so the exact failing validation branch is NOT VERIFIED. No generated answer was saved, adopted, or submitted.
++- **Acceptance still required:** real Muse answer appears in the browser; at least one answer claim opens the exact recorded response from the reviewed record/revision; HA, backups, implementation ownership, and unknown measured outcome remain unresolved when unsupported; candidate reviews/adopts explicitly; zero employer submissions. Native Wails and persistent reject/clarify remain separate follow-ups.
++- **Evidence:** [October 26 sprint addendum](implementation/2026-10-26-career-discovery.md); [engine integration status](../career-discovery/integration/README.md).
++
+diff --git a/docs/implementation/2026-10-26-career-discovery.md b/docs/implementation/2026-10-26-career-discovery.md
+new file mode 100644
+index 0000000..e733e24
+--- /dev/null
++++ b/docs/implementation/2026-10-26-career-discovery.md
+@@ -0,0 +1,70 @@
++# Career Discovery — October 26 checkpoint
++
++**Host feature:** `2465d18` · **AI Connections cleanup:** `e753a0e` · **Engine:** `1858750f32d466852c9c7ffdf64e37387cd50813`.
++
++The implementation, compliance assessment, live evidence, remaining schedule, submission checklist and next-action handoff are in the fresh engine repository's [engineering report](https://github.com/jenksed/yourmove-career-discovery/blob/1858750f32d466852c9c7ffdf64e37387cd50813/docs/EXECUTION.md). Its authoritative local copy is `career-discovery/docs/EXECUTION.md`.
++
++The original host started clean at isolation commit `c68051349c1d642b83c514a3377555afa9941542`. `yourmove-go` was not modified or made a runtime dependency. The inherited host repository is **not** the submission artifact. The new private repository has one fresh root commit and no inherited application history/source. Its [discovery-only integration patch](https://github.com/jenksed/yourmove-career-discovery/blob/1858750f32d466852c9c7ffdf64e37387cd50813/integration/yourmove.patch) contains new files and zero-context additions, with no deleted preexisting lines. AI Connections cleanup is host-only and excluded from that patch.
++
++## Resume development
++
++The host's `career-discovery/` directory is an ignored independent Git checkout, not a second copy of the engine. `go.mod` uses it directly; `career-discovery.lock` pins the tested revision. After a fresh host clone:
++
++```sh
++git clone https://github.com/jenksed/yourmove-career-discovery.git career-discovery
++git -C career-discovery checkout 1858750f32d466852c9c7ffdf64e37387cd50813
++go test -count=1 ./...
++go test -count=1 -tags desktop ./...
++go build -o /private/tmp/yourmove-career-discovery-b1 .
++python3 scripts/run-discovery-demo.py /private/tmp/yourmove-career-discovery-b1 /private/tmp/yourmove-discovery-b1-workspace
++```
++
++Place `MODEL_API_KEY` in the ignored `.env` or launch environment. The launcher reads only that variable without shell evaluation. It uses an explicit synthetic workspace and port 3019. Open `/ai` for Meta readiness/setup and `/career-discovery` for interviews. Do not reinitialize the workspace when verifying restart persistence.
++
++Current native build (build/signature verification only):
++
++```text
++/private/tmp/yourmove-discovery-b1-final-native/YourMove Hackathon Edition.app
++```
++
++Build a new native artifact with `scripts/build-hackathon-macos.sh /absolute/new/output-directory`. The new workflow still needs native Wails interaction acceptance; the previously running native app was not replaced or stopped.
++
++## Observed acceptance
++
++- Real standard-mode Muse questions and adaptive follow-ups through the full browser app, using synthetic data.
++- New MySQL full-table-scan and diagnostic-handoff detail beyond the sparse résumé; fix ownership and measured outcome left unresolved.
++- Exact candidate-source inspection; proposed evidence opened in the existing editor; corrected and explicitly reviewed; reviewed content and original transcript survived a process restart.
++- Standalone synthetic CLI ran live `muse-spark-1.3-contributor`, in 3.67 seconds, with 363 input / 353 output tokens (about $0.000107 estimated).
++- Meta-first AI Connections and its settings disclosure observed in Chrome. Other services grouped into concise native disclosures.
++- Complete ordinary and desktop-tagged Go suites PASS; independent module suite PASS; native bundle build/signing PASS. Narrow and native visual acceptance NOT VERIFIED.
++- Muse Code performed the requested bounded review. Its useful retry-handling issue was fixed; source rebinding was added at persistence; its ordinary-provider-failure orphan claim was not reproduced. Regression tests pass.
++
++One initial live follow-up was rejected by provider output validation. Input was retained, no evidence was approved, and an explicit retry succeeded after setting Muse reasoning/output controls. Its original raw failure cause and usage were not captured. Measured standard browser requests ranged from 2.9 to 9.4 seconds. Four measured browser calls cost about $0.02117; this is not a complete account-spend total.
++
++## Handoff
++
++**Working now:** browser B1 discovery/review/persistence, source-linked proposals, independent Contributor synthetic runner and concise Meta-first AI Connections.
++
++**Implemented but unverified:** native interaction and narrow-layout behavior; broader model reliability. Job-answer source infrastructure is preexisting but has not been qualified with this new evidence and Meta.
++
++**Blocked:** no API/credential blocker. Ask organizers whether a disclosed preexisting demo host and event-only integration patches are permitted. The public event page did not expose the supplied FAQ or final rubric. Arrange judge access to the private repository before submission.
++
++**Decisions needed:** no product decision before the next implementation slice. Final visibility, organizer interpretation and owner-controlled submission remain outstanding.
++
++**Next implementation action:** activate one reviewed MySQL experience for a real job-specific question using the existing application-answer path and Muse; make one answer claim open its actual stored source. Demonstrate insufficient evidence for an unsupported qualification. Then finish durable rejection/clarification, native acceptance and the small synthetic evaluation before recording.
++
++Contributor is preferred for synthetic/public development and future code reviews. Candidate-facing discovery stays in standard mode. No autonomous employer submission, source merge, release or hackathon submission was performed.
++
++## Career Evidence → application-answer sprint addendum
++
++This addendum supersedes the “Next implementation action” status above for the October 26 answer-trace sprint. Baseline at sprint start was host `29c368dc085a8c17968a485c9253c527801a01f6` on `feat/career-discovery-b1`, and event engine `1858750f32d466852c9c7ffdf64e37387cd50813` on `main`.
++
++- The engine added `AnswerTrace`, `TraceSource`, and fail-closed validation of exact evidence/revision/response identities and literal quote resolution. Engine code commit: `47717b0e12272a1c91ba56fb2c7af9b84d481a99`.
++- The host now binds reviewed evidence to immutable interview responses, requests structured output through the configured compatible provider, and renders an ephemeral unsaved Evidence Trace disclosure. The one-way integration snapshot and updated execution docs are in the current event-engine HEAD. Host lock remains pinned to engine code commit `47717b0e12272a1c91ba56fb2c7af9b84d481a99`; host sprint commit is pending.
++- Muse CLI was `v1.4.13`; `muse exec` exposed workspace/worktree, explicit model, reasoning effort, step limit and approval controls. A bounded isolated worktree was created for the event-only engine. Muse execution did not reach model steps: model catalog TLS transport failed, then local session/keychain setup failed (`OSStatus -50`). No worker changes or commit were accepted; no credentials were printed. The delegation attempt added overhead and no implementation value.
++- The actual browser used synthetic candidate material and a public Percona MySQL application question with the configured Muse Spark 1.3-compatible endpoint in Standard mode. Three bounded provider calls completed, but each response failed the host's strict structured answer/trace gate. The last request set `response_format: {"type":"json_object"}`. The raw provider response was deliberately not retained; the current user-facing error does not identify whether JSON parsing, answer-policy/format, or source-reference validation failed. The exact branch is therefore NOT VERIFIED. No draft was saved/adopted and no employer form was filled or submitted. Model token/cost metrics were not observed in the host flow.
++- Full host `go test -count=1 ./...` passed after allowing existing loopback test servers; focused trace/answer tests and the compatible JSON-request contract passed. The standalone engine suite passed. A browser capture did verify Career Evidence ID 1 revision 2 and the selected Percona question, but no successful answer/trace appeared.
++
++**Current state:** trace validation, host adapter, and candidate-facing disclosure are implemented; the core real-model answer demonstration remains **NEEDS LIVE VERIFICATION** due to the provider-output contract failure. Do not call this milestone complete until a real Muse response produces an answer with a resolvable source and a visible unresolved unsupported qualification.
++
++**Next three actions:** (1) add safe branch-level diagnostics and a synthetic response fixture for every output rejection class, then fix the observed provider contract; accept only after one live browser response displays a cited original response; (2) exercise the same flow in native Wails and record exact candidate review/adoption and cancellation behavior; (3) implement persistent candidate rejection/clarification and prove that edits invalidate/rebuild trace assumptions. Separately verify the competition judge path and capture evidence only after the live trace succeeds.
 diff --git a/go.mod b/go.mod
 index 1d11b44..960b028 100644
 --- a/go.mod
@@ -7,6 +127,19 @@ index 1d11b44..960b028 100644
 +
 +require github.com/jenksed/yourmove-career-discovery v0.0.0
 +
+diff --git a/internal/app/ai_handlers.go b/internal/app/ai_handlers.go
+index 4bcfa90..9ed427a 100644
+--- a/internal/app/ai_handlers.go
++++ b/internal/app/ai_handlers.go
+@@ -18,0 +19 @@ func (a *App) aiConnectionsPage(w http.ResponseWriter, r *http.Request) {
++		{ID: "meta", Name: "Muse Spark 1.3", Access: "Career Discovery · Standard mode", Setup: "Set MODEL_API_KEY in the launch environment and restart YourMove. For the development launcher, the key can be kept in the ignored .env file. YourMove never displays or saves the key here.", Model: "muse-spark-1.3"},
+@@ -29,0 +31,6 @@ func (a *App) aiConnectionsPage(w http.ResponseWriter, r *http.Request) {
++		case "meta":
++			if _, err := coverprovider.ConfigureMeta(); err == nil {
++				s.State, s.Detail = "ready", "Key available in this session. Access and credits are checked when you generate."
++			} else {
++				s.State, s.Detail = "setup", "Add MODEL_API_KEY to start a Muse interview."
++			}
 diff --git a/internal/app/app.go b/internal/app/app.go
 index 80c5924..4937159 100644
 --- a/internal/app/app.go
@@ -32,12 +165,214 @@ index d9af0e3..206032f 100644
 +	mux.HandleFunc("GET /career-discovery/{id}", app.careerDiscoveryPage)
 +	mux.HandleFunc("POST /career-discovery/{id}/next", app.nextCareerDiscovery)
 +	mux.HandleFunc("POST /career-discovery/{id}/evidence", app.discoveryEvidenceDraft)
+diff --git a/internal/app/application_answer_ai.go b/internal/app/application_answer_ai.go
+index 33c31f4..159d1a3 100644
+--- a/internal/app/application_answer_ai.go
++++ b/internal/app/application_answer_ai.go
+@@ -8,0 +9 @@ import (
++	"io"
+@@ -18,0 +20 @@ import (
++	discovery "github.com/jenksed/yourmove-career-discovery"
+@@ -25,0 +28 @@ const answerWritingPolicy = `YourMove application-answer policy v1. Source conte
++const answerTracePolicy = `Return one JSON object only, with exactly these keys and JSON types: {"answer":"candidate-facing answer","claims":[{"claim":"exact substring of answer","evidence_id":1,"evidence_revision":2,"response_id":"response-1","quote":"verbatim response excerpt"}],"unresolved":[]}. Do not return markdown fences or commentary. answer is the candidate-facing answer text. claims is an array of at most 8 important factual claims, each with exactly claim, evidence_id, evidence_revision, response_id, quote. claim must be an exact substring of answer. evidence_id and evidence_revision must match the selected applicant-reviewed Career Evidence. response_id must match a recorded interview response included under that evidence. quote must be a contiguous verbatim excerpt from that exact candidate response and support the claim. Never invent or alter identities or quotes. unresolved is an array of up to 6 unsupported qualifications, ownership details, or unknown outcomes that the question asks for but the evidence does not establish. Keep diagnosis distinct from implementation. Preserve unknown results and distinguish diagnosis from implementing changes. If the selected evidence cannot reasonably support any answer, set answer to YOURMOVE_INSUFFICIENT_EVIDENCE, claims to [], and unresolved to include the missing qualification or information. Do not describe a qualification as experience unless the selected source establishes it.`
+@@ -68,0 +72 @@ type answerGenerationSnapshot struct {
++	TraceSources                                  []discovery.TraceSource
+@@ -192 +196,8 @@ func (a *App) buildAnswerGenerationSnapshot(id int64, v url.Values) (answerGener
+-		projection := struct{ Title, Situation, Actions, Employer, Role, Technologies, Period, OutcomeState, Outcome string }{e.Title, e.Situation, e.Actions, e.EmployerContext, e.RoleContext, e.Technologies, e.Period, e.OutcomeState, ""}
++		traceSources, err := a.careerEvidenceTraceSources(e)
++		if err != nil {
++			return out, errors.New("evidence_provenance")
++		}
++		projection := struct {
++			Title, Situation, Actions, Employer, Role, Technologies, Period, OutcomeState, Outcome string
++			InterviewResponses                                                                     []discovery.TraceSource `json:"interview_responses,omitempty"`
++		}{e.Title, e.Situation, e.Actions, e.EmployerContext, e.RoleContext, e.Technologies, e.Period, e.OutcomeState, "", traceSources}
+@@ -204,0 +216 @@ func (a *App) buildAnswerGenerationSnapshot(id int64, v url.Values) (answerGener
++		out.TraceSources = append(out.TraceSources, traceSources...)
+@@ -301,0 +314,3 @@ func (a *App) buildAnswerGenerationSnapshot(id int64, v url.Values) (answerGener
++	if len(out.TraceSources) > 0 {
++		out.Instructions += "\n\n" + answerTracePolicy
++	}
+@@ -340,0 +356,23 @@ func validateGeneratedApplicationAnswer(text string) error {
++func parseGeneratedAnswerTrace(raw string) (discovery.AnswerTrace, error) {
++	var trace discovery.AnswerTrace
++	if !validNarrativeText(raw) || len(raw) > 20<<10 {
++		return trace, errors.New("trace output")
++	}
++	raw = strings.TrimSpace(raw)
++	if strings.HasPrefix(raw, "```json") && strings.HasSuffix(raw, "```") {
++		raw = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(raw, "```json"), "```"))
++	} else if strings.HasPrefix(raw, "```") && strings.HasSuffix(raw, "```") {
++		raw = strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(raw, "```"), "```"))
++	}
++	decoder := json.NewDecoder(strings.NewReader(raw))
++	decoder.DisallowUnknownFields()
++	if decoder.Decode(&trace) != nil {
++		return discovery.AnswerTrace{}, errors.New("trace output")
++	}
++	var extra any
++	if decoder.Decode(&extra) != io.EOF {
++		return discovery.AnswerTrace{}, errors.New("trace output")
++	}
++	return trace, nil
++}
++
+@@ -548,0 +587 @@ func (a *App) applicationAnswerAIHandler(w http.ResponseWriter, r *http.Request)
++		t.trace = nil
+@@ -612,0 +652 @@ func (a *App) applicationAnswerAIHandler(w http.ResponseWriter, r *http.Request)
++	var trace *discovery.AnswerTrace
+@@ -614,0 +655,2 @@ func (a *App) applicationAnswerAIHandler(w http.ResponseWriter, r *http.Request)
++	} else if len(snapshot.TraceSources) > 0 {
++		answer, err = runner.GenerateNarrativeJSON(ctx, snapshot.Prompt, snapshot.Instructions)
+@@ -626,0 +669,11 @@ func (a *App) applicationAnswerAIHandler(w http.ResponseWriter, r *http.Request)
++	} else if len(snapshot.TraceSources) > 0 {
++		parsed, parseErr := parseGeneratedAnswerTrace(answer)
++		if parseErr != nil {
++			code, final = "output", "failed"
++		} else if parsed.Answer == insufficientAnswer && len(parsed.Claims) == 0 {
++			final, answer = "insufficient", ""
++		} else if validateGeneratedApplicationAnswer(parsed.Answer) != nil || !validNarrativeFormat(parsed.Answer, snapshot.Field.Label) || discovery.ValidateAnswerTrace(parsed, snapshot.TraceSources) != nil {
++			code, final = "output", "failed"
++		} else {
++			answer, trace = parsed.Answer, &parsed
++		}
+@@ -651,0 +705 @@ func (a *App) applicationAnswerAIHandler(w http.ResponseWriter, r *http.Request)
++			t.trace = trace
+@@ -660 +714 @@ func (a *App) answerAIResult(w http.ResponseWriter, token string, t *answerAITic
+-	state, answer, code, expires, s := t.state, t.answer, t.code, t.expires, t.snapshot
++	state, answer, code, expires, s, trace := t.state, t.answer, t.code, t.expires, t.snapshot, t.trace
+@@ -688 +742 @@ func (a *App) answerAIResult(w http.ResponseWriter, token string, t *answerAITic
+-	answerAIResponse(w, 200, map[string]any{"ticket": token, "state": state, "question_key": s.QuestionKey, "question": s.Field.Label, "revision": s.Revision, "answer": answer, "adoptable": state == "complete" && valid && time.Now().Before(expires), "notice": notice, "expires_at": expires})
++	answerAIResponse(w, 200, map[string]any{"ticket": token, "state": state, "question_key": s.QuestionKey, "question": s.Field.Label, "revision": s.Revision, "answer": answer, "trace": trace, "adoptable": state == "complete" && valid && time.Now().Before(expires), "notice": notice, "expires_at": expires})
+diff --git a/internal/app/application_answer_ai_state.go b/internal/app/application_answer_ai_state.go
+index b0eef3a..b3a08a2 100644
+--- a/internal/app/application_answer_ai_state.go
++++ b/internal/app/application_answer_ai_state.go
+@@ -8,0 +9,2 @@ import (
++
++	discovery "github.com/jenksed/yourmove-career-discovery"
+@@ -15,0 +18 @@ type answerAITicket struct {
++	trace               *discovery.AnswerTrace
+@@ -60,0 +64 @@ func (r *answerAIRegistry) close() {
++		t.trace = nil
+diff --git a/internal/app/application_answer_ai_test.go b/internal/app/application_answer_ai_test.go
+index bacbf6f..0578a06 100644
+--- a/internal/app/application_answer_ai_test.go
++++ b/internal/app/application_answer_ai_test.go
+@@ -17,0 +18 @@ import (
++	discovery "github.com/jenksed/yourmove-career-discovery"
+@@ -317,0 +319,105 @@ func TestNarrativeInsufficientFailureAndSnapshotBaseline(t *testing.T) {
++
++func addDiscoveryTraceFixture(t *testing.T, a *App, evidenceID int64) {
++	t.Helper()
++	state, err := discovery.New("Provided Linux and database troubleshooting support.")
++	if err != nil {
++		t.Fatal(err)
++	}
++	state.Responses = []discovery.Response{{Question: "What did you find?", Source: discovery.Source{ID: "response-1", Kind: "self_report", Text: "I used EXPLAIN and found a full table scan. Another team implemented the fix, and I do not know the measured outcome."}}}
++	state.Proposal = &discovery.Proposal{Title: "MySQL query investigation", Experience: "I found a full table scan with EXPLAIN.", Claim: "I used EXPLAIN and found a full table scan.", SourceID: "response-1", Quote: "I used EXPLAIN and found a full table scan.", Unresolved: []string{"Which fix was implemented and what was the measured outcome?"}}
++	if err := state.ValidateProposal(); err != nil {
++		t.Fatal(err)
++	}
++	state.Question = "What did you hand off?"
++	raw, _ := json.Marshal(state)
++	if _, err := a.db.Exec(`INSERT INTO career_discovery(revision,state,evidence_id,created_at) VALUES(1,?,?,?)`, string(raw), evidenceID, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := a.db.Exec(`UPDATE career_evidence SET source_writing=?,revision=revision+1 WHERE id=?`, state.Transcript(), evidenceID); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func traceModelOutput(t *testing.T, evidenceID, revision int64, responseID, quote, answer string) string {
++	t.Helper()
++	value := discovery.AnswerTrace{Answer: answer, Claims: []discovery.AnswerClaim{{Claim: "I used EXPLAIN and found a full table scan", EvidenceID: evidenceID, EvidenceRevision: revision, ResponseID: responseID, Quote: quote}}, Unresolved: []string{"The implementing team and measured performance outcome are not established."}}
++	raw, err := json.Marshal(value)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return string(raw)
++}
++
++func TestNarrativeCareerDiscoveryEvidenceTrace(t *testing.T) {
++	a, v, id := narrativeFixture(t)
++	addDiscoveryTraceFixture(t, a, id)
++	e, err := careerEvidenceByID(a.db, id)
++	if err != nil {
++		t.Fatal(err)
++	}
++	v.Set("career_evidence", fmt.Sprintf("%d:%d:%s", id, e.Revision, e.CreatedAt))
++	answer := "I used EXPLAIN and found a full table scan. Another team implemented the fix, and I do not know its measured outcome."
++	a.applicationAnswerGenerate = func(_ context.Context, prompt, instructions string) (string, error) {
++		if !strings.Contains(prompt, "interview_responses") || !strings.Contains(instructions, "answer_trace") && !strings.Contains(instructions, "response_id") {
++			return "", fmt.Errorf("trace context or policy missing")
++		}
++		return traceModelOutput(t, id, e.Revision, "response-1", "I used EXPLAIN and found a full table scan", answer), nil
++	}
++	ticket := reviewNarrative(t, a, v)
++	a.answerAI.mu.Lock()
++	snapshot := a.answerAI.tickets[ticket].snapshot
++	a.answerAI.mu.Unlock()
++	if len(snapshot.TraceSources) != 1 || snapshot.TraceSources[0].EvidenceID != id || snapshot.TraceSources[0].EvidenceRevision != e.Revision {
++		t.Fatalf("trace source binding: %#v", snapshot.TraceSources)
++	}
++	r := postApp(newMux(a), "/jobs/1/answers/ai/generate", generationForm(ticket), "", "")
++	if r.Code != 200 || !strings.Contains(r.Body.String(), `"state":"complete"`) || !strings.Contains(r.Body.String(), `"response_id":"response-1"`) || !strings.Contains(r.Body.String(), `"quote":"I used EXPLAIN and found a full table scan"`) || !strings.Contains(r.Body.String(), `"unresolved":["The implementing team`) {
++		t.Fatalf("trace answer rejected or hidden: %d %s", r.Code, r.Body.String())
++	}
++	var count int
++	if err := a.db.QueryRow(`SELECT COUNT(*) FROM application_answers WHERE job_id=1`).Scan(&count); err != nil || count != 0 {
++		t.Fatalf("generation saved answer: count=%d err=%v", count, err)
++	}
++	if !a.validateAnswerGenerationSnapshot(snapshot) {
++		t.Fatal("trace snapshot unexpectedly stale")
++	}
++	if _, err := a.db.Exec(`UPDATE career_evidence SET revision=revision+1 WHERE id=?`, id); err != nil {
++		t.Fatal(err)
++	}
++	if a.validateAnswerGenerationSnapshot(snapshot) {
++		t.Fatal("changed reviewed evidence revision accepted")
++	}
++}
++
++func TestNarrativeCareerDiscoveryEvidenceTraceRejectsFabricatedSource(t *testing.T) {
++	a, v, id := narrativeFixture(t)
++	addDiscoveryTraceFixture(t, a, id)
++	e, err := careerEvidenceByID(a.db, id)
++	if err != nil {
++		t.Fatal(err)
++	}
++	v.Set("career_evidence", fmt.Sprintf("%d:%d:%s", id, e.Revision, e.CreatedAt))
++	a.applicationAnswerGenerate = func(context.Context, string, string) (string, error) {
++		return traceModelOutput(t, id, e.Revision+1, "response-99", "I personally implemented the fix", "I personally implemented the fix."), nil
++	}
++	ticket := reviewNarrative(t, a, v)
++	r := postApp(newMux(a), "/jobs/1/answers/ai/generate", generationForm(ticket), "", "")
++	if r.Code != http.StatusUnprocessableEntity || !strings.Contains(r.Body.String(), `"code":"output"`) {
++		t.Fatalf("fabricated trace accepted: %d %s", r.Code, r.Body.String())
++	}
++	var count int
++	if err := a.db.QueryRow(`SELECT COUNT(*) FROM application_answers WHERE job_id=1`).Scan(&count); err != nil || count != 0 {
++		t.Fatalf("rejected trace saved answer: count=%d err=%v", count, err)
++	}
++}
++
++func TestParseGeneratedAnswerTraceAcceptsSingleJSONFence(t *testing.T) {
++	raw := "```json\n{\"answer\":\"I reviewed the slow query\",\"claims\":[{\"claim\":\"I reviewed the slow query\",\"evidence_id\":1,\"evidence_revision\":2,\"response_id\":\"response-1\",\"quote\":\"I investigated a production MySQL database\"}],\"unresolved\":[\"The performance impact is unknown.\"]}\n```"
++	trace, err := parseGeneratedAnswerTrace(raw)
++	if err != nil || trace.Answer != "I reviewed the slow query" || len(trace.Claims) != 1 || trace.Claims[0].ResponseID != "response-1" || len(trace.Unresolved) != 1 {
++		t.Fatalf("trace=%#v err=%v", trace, err)
++	}
++	if _, err := parseGeneratedAnswerTrace(raw + " extra"); err == nil {
++		t.Fatal("accepted content after fenced trace")
++	}
++}
 diff --git a/internal/app/career_discovery.go b/internal/app/career_discovery.go
 new file mode 100644
-index 0000000..4d1d99d
+index 0000000..af30b6d
 --- /dev/null
 +++ b/internal/app/career_discovery.go
-@@ -0,0 +1,311 @@
+@@ -0,0 +1,337 @@
 +package app
 +
 +import (
@@ -89,6 +424,32 @@ index 0000000..4d1d99d
 +	}
 +	p.CanAnswer = p.EvidenceID == 0 && p.State.Question != "" && len(p.State.Responses) < discovery.MaxResponses
 +	return p, nil
++}
++
++// careerEvidenceTraceSources rebinds interview responses to the exact reviewed
++// record revision. A record without a discovery row remains usable for ordinary
++// answer drafting, but cannot advertise an interview Evidence Trace.
++func (a *App) careerEvidenceTraceSources(e CareerEvidence) ([]discovery.TraceSource, error) {
++	var raw string
++	err := a.db.QueryRow(`SELECT state FROM career_discovery WHERE evidence_id=?`, e.ID).Scan(&raw)
++	if errors.Is(err, sql.ErrNoRows) {
++		return nil, nil
++	}
++	if err != nil {
++		return nil, err
++	}
++	var state discovery.State
++	if json.Unmarshal([]byte(raw), &state) != nil || state.Proposal == nil || state.ValidateProposal() != nil || e.SourceWriting != state.Transcript() || len(state.Responses) == 0 {
++		return nil, discovery.ErrInvalid
++	}
++	sources := make([]discovery.TraceSource, 0, len(state.Responses))
++	for i, response := range state.Responses {
++		if response.Source.ID != fmt.Sprintf("response-%d", i+1) || response.Source.Kind != "self_report" || !validNarrativeText(response.Question) || !validNarrativeText(response.Source.Text) || len(response.Source.Text) > 2000 {
++			return nil, discovery.ErrInvalid
++		}
++		sources = append(sources, discovery.TraceSource{EvidenceID: e.ID, EvidenceRevision: e.Revision, ResponseID: response.Source.ID, ResponseText: response.Source.Text})
++	}
++	return sources, nil
 +}
 +
 +func (a *App) careerDiscoveryPage(w http.ResponseWriter, r *http.Request) {
@@ -560,15 +921,16 @@ index 0000000..a22fee3
 +	}
 +}
 diff --git a/internal/coverletter/provider/providers.go b/internal/coverletter/provider/providers.go
-index 32fd12f..3b26155 100644
+index 32fd12f..8a24dc8 100644
 --- a/internal/coverletter/provider/providers.go
 +++ b/internal/coverletter/provider/providers.go
 @@ -15,0 +16,2 @@ import (
 +
 +	discovery "github.com/jenksed/yourmove-career-discovery"
-@@ -26,0 +29,17 @@ type coverBackend struct {
+@@ -26,0 +29,18 @@ type coverBackend struct {
 +
 +	metaDiscovery bool
++	jsonOutput     bool
 +	observe       func(RequestMetrics)
 +}
 +
@@ -584,7 +946,7 @@ index 32fd12f..3b26155 100644
 +	backend := r.backend
 +	backend.observe = observe
 +	return runProviderProfile(ctx, backend, prompt, instructions, nil, true)
-@@ -49,0 +69,13 @@ type Runner struct {
+@@ -49,0 +70,13 @@ type Runner struct {
 +// ConfigureMeta reuses the compatible transport without mutating process-wide
 +// provider settings. Discovery always uses standard mode, never Contributor.
 +func ConfigureMeta() (Runner, error) {
@@ -598,14 +960,26 @@ index 32fd12f..3b26155 100644
 +	}}, nil
 +}
 +
-@@ -251,0 +284,6 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
+@@ -90,0 +124,9 @@ func (r Runner) GenerateNarrative(ctx context.Context, prompt, instructions stri
++// GenerateNarrativeJSON requests JSON object output from an OpenAI-compatible
++// endpoint for narrow workflows whose callers validate structured references.
++func (r Runner) GenerateNarrativeJSON(ctx context.Context, prompt, instructions string) (string, error) {
++	if r.backend.Provider == "compatible" {
++		r.backend.jsonOutput = true
++	}
++	return r.GenerateNarrative(ctx, prompt, instructions)
++}
++
+@@ -251,0 +294,8 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
 +	if backend.metaDiscovery {
 +		fields := request.(map[string]any)
 +		fields["max_tokens"] = 2048
 +		fields["reasoning_effort"] = "low"
 +		fields["response_format"] = map[string]string{"type": "json_object"}
++	} else if narrative && backend.jsonOutput && backend.Provider == "compatible" {
++		request.(map[string]any)["response_format"] = map[string]string{"type": "json_object"}
 +	}
-@@ -312,0 +351,21 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
+@@ -312,0 +363,21 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
 +	if backend.observe != nil {
 +		var metadata struct {
 +			Usage struct {
@@ -627,6 +1001,31 @@ index 32fd12f..3b26155 100644
 +			backend.observe(m)
 +		}
 +	}
+diff --git a/internal/coverletter/provider/providers_test.go b/internal/coverletter/provider/providers_test.go
+index 3274d4c..643c5cf 100644
+--- a/internal/coverletter/provider/providers_test.go
++++ b/internal/coverletter/provider/providers_test.go
+@@ -127,0 +128,20 @@ func TestCoverProviderFailureCategories(t *testing.T) {
++func TestGenerateNarrativeJSONRequestsJSONFromCompatibleProvider(t *testing.T) {
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		var payload map[string]any
++		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
++			t.Fatal(err)
++		}
++		if got := payload["response_format"].(map[string]any)["type"]; got != "json_object" {
++			t.Fatalf("response_format = %v", got)
++		}
++		w.Header().Set("Content-Type", "application/json")
++		fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"content":"{\"answer\":\"grounded\"}"}}]}`)
++	}))
++	defer server.Close()
++	runner := Runner{provider: "compatible", backend: coverBackend{Provider: "compatible", Model: "sample-model", URL: server.URL, APIKey: "test-key"}}
++	got, err := runner.GenerateNarrativeJSON(context.Background(), "synthetic evidence", "return JSON")
++	if err != nil || got != `{"answer":"grounded"}` {
++		t.Fatalf("got %q, error %v", got, err)
++	}
++}
++
 diff --git a/scripts/run-discovery-demo.py b/scripts/run-discovery-demo.py
 new file mode 100644
 index 0000000..93a0836
@@ -667,6 +1066,112 @@ index 0000000..93a0836
 +os.environ["YOURMOVE_COMPAT_MODEL"] = "muse-spark-1.3"
 +os.environ["YOURMOVE_COMPAT_API_KEY"] = os.environ["MODEL_API_KEY"]
 +os.execvp(sys.argv[1], [sys.argv[1]])
+diff --git a/static/styles.css b/static/styles.css
+index fbcef55..d718e68 100644
+--- a/static/styles.css
++++ b/static/styles.css
+@@ -1042,0 +1043,8 @@ a.progress-metric:hover span {text-decoration:underline;color:var(--color-primar
++.answer-ai [data-answer-ai-trace] { margin-block: 12px; max-width: 72ch; }
++.answer-ai [data-answer-ai-trace] > summary { font-weight: 650; padding-block: 6px; }
++.answer-ai [data-answer-ai-trace-claims] { padding-left: 22px; }
++.answer-ai [data-answer-ai-trace-claims] li + li { margin-top: 14px; }
++.answer-ai [data-answer-ai-trace-claims] p { margin-block: 4px; }
++.answer-ai [data-answer-ai-trace-claims] blockquote { margin: 6px 0; padding: 8px 12px; border-left: 2px solid var(--color-border); color: var(--color-muted); overflow-wrap: anywhere; }
++.answer-ai [data-answer-ai-trace-unresolved] { margin-top: 12px; }
++.answer-ai [data-answer-ai-trace-unresolved] h5 { margin-bottom: 4px; }
+@@ -1261,0 +1270,12 @@ h1,.job-hero h1 {font-size:28px;line-height:1.2;margin-bottom:8px}
++/* AI Connections: Meta leads; other setup stays grouped and discoverable. */
++.ai-connections-page {max-width:780px}
++.ai-connections-page h2 {font-size:18px;margin:22px 0 0}
++.ai-meta-connection {padding-top:14px}
++.ai-meta-connection>p {max-width:70ch}
++.ai-meta-settings {display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 16px;margin:14px 0}
++.ai-meta-settings dt {font-weight:600}
++.ai-meta-settings dd {margin:0;overflow-wrap:anywhere}
++.ai-service-group {border-bottom:1px solid var(--color-border);padding:16px 0}
++.ai-service-group>summary {cursor:pointer;font-weight:600;line-height:1.6}
++.ai-service-group>summary span {display:block;margin-left:18px;font-size:13px;font-weight:400;color:var(--color-muted)}
++
+diff --git a/static/ui.js b/static/ui.js
+index a24d006..b918c74 100644
+--- a/static/ui.js
++++ b/static/ui.js
+@@ -1010,0 +1011,18 @@
++      const trace = value.trace;
++      const tracePanel = find('trace');
++      const traceClaims = find('trace-claims');
++      const traceUnknowns = find('trace-unknowns');
++      traceClaims.replaceChildren(); traceUnknowns.replaceChildren();
++      const claims = Array.isArray(trace?.claims) ? trace.claims : [];
++      claims.forEach(claim => {
++        const item = document.createElement('li');
++        const statement = document.createElement('p'); statement.textContent = claim.claim || '';
++        const identity = document.createElement('p'); identity.className = 'small-muted';
++        identity.textContent = `Career Evidence ${claim.evidence_id} · reviewed revision ${claim.evidence_revision} · original interview ${claim.response_id}`;
++        const quote = document.createElement('blockquote'); quote.textContent = claim.quote || '';
++        item.append(statement, identity, quote); traceClaims.append(item);
++      });
++      const unresolved = Array.isArray(trace?.unresolved) ? trace.unresolved : [];
++      unresolved.forEach(text => { const item = document.createElement('li'); item.textContent = text; traceUnknowns.append(item); });
++      find('trace-unresolved').hidden = unresolved.length === 0;
++      tracePanel.hidden = claims.length === 0;
+@@ -1145 +1163 @@
+-      preview = null; find('text').value = ''; find('preview-payload').textContent = ''; find('preview-sources').hidden = true; find('preview').hidden = true; find('another').open = true; persist(); status('Preview discarded. Your editor is unchanged.');
++      preview = null; find('text').value = ''; find('preview-payload').textContent = ''; find('trace-claims').replaceChildren(); find('trace-unknowns').replaceChildren(); find('trace').hidden = true; find('preview-sources').hidden = true; find('preview').hidden = true; find('another').open = true; persist(); status('Preview discarded. Your editor is unchanged.');
+diff --git a/templates/ai.html b/templates/ai.html
+index 3f860a8..507dcd7 100644
+--- a/templates/ai.html
++++ b/templates/ai.html
+@@ -2,2 +2 @@
+-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f7f7f4"><title>AI connections · YourMove</title><link rel="stylesheet" href="/static/styles.css"><script defer src="/static/ui.js"></script></head>
+-<body>
++<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f7f7f4"><title>AI connections · YourMove</title><link rel="stylesheet" href="/static/styles.css"><script defer src="/static/ui.js"></script></head><body>
+@@ -5,9 +4,21 @@
+-<div class="ai-hub">
+-  <header class="page-heading ai-hub-header">
+-    <div><h1>AI connections</h1><p class="page-description">Optional assistance for answers and cover letters. Manual writing and preparation remain available without AI.</p></div>
+-    <a href="/jobs" class="button button-secondary">Back to opportunities →</a>
+-  </header>
+-  <div class="ai-mode-heading"><h2>Available connections</h2><span class="ai-muted-inline">Configuration at page load; access checked during generation</span></div>
+-  <section aria-labelledby="local-ai-heading"><h2 id="local-ai-heading">On this device</h2><div class="ai-connection-grid">{{range .Connections}}{{if eq .ID "ollama"}}{{template "ai-connection" .}}{{end}}{{end}}</div></section>
+-  <section aria-labelledby="external-ai-heading"><h2 id="external-ai-heading">External services and custom endpoints</h2><p class="small-muted">Custom endpoints may be local or external, depending on your configuration.</p><div class="ai-connection-grid">{{range .Connections}}{{if ne .ID "ollama"}}{{template "ai-connection" .}}{{end}}{{end}}</div></section>
+-  <div class="ai-hub-footer"><h2>Review sources → Authorize generation → Review proposal → Adopt → Save</h2><p>Answer proposals stay unsaved until you adopt and explicitly save them. Cover-letter generation creates a separate local draft for review.</p><p>YourMove builds one prompt from your saved job description, master resume, and chosen role resume. Generation only starts when you approve it. Cloud and subscription-backed options send that evidence off-device; Ollama runs locally. Existing drafts are never replaced automatically.</p><p>CLI integrations use your separately installed, unmodified vendor tools. A detected login is not a guarantee of remaining subscription allowance. API keys and usage are separate from ChatGPT and Claude subscriptions. Claude subscription use in a distributed third-party product may require additional permission.</p></div>
++<div class="ai-hub ai-connections-page">
++  <header class="page-heading"><div><h1>AI connections</h1><p class="page-description">Choose a service for discovery or writing. Access is checked when you generate.</p></div></header>
++  <section aria-labelledby="meta-ai-heading">
++    <h2 id="meta-ai-heading">Meta</h2>
++    {{range .Connections}}{{if eq .ID "meta"}}
++    <article class="ai-connection-card ai-meta-connection" id="connection-meta">
++      <div class="ai-connection-top"><h3>{{.Name}}</h3><span class="ai-state ai-state-{{.State}}">{{if eq .State "ready"}}Key available{{else}}Key needed{{end}}</span></div>
++      <p class="ai-connection-access">{{.Access}}</p><p>{{.Detail}}</p>
++      <p class="small-muted">Interview excerpts and responses go to Meta after you authorize each request. Standard mode does not contribute content for model training.</p>
++      <details class="ai-connection-setup" {{if ne .State "ready"}}open{{end}}><summary>Key and model settings</summary><p>{{.Setup}}</p><dl class="ai-meta-settings"><dt>Credential</dt><dd><code>MODEL_API_KEY</code></dd><dt>Model</dt><dd><code>{{.Model}}</code></dd></dl><p>Contributor mode is available in the separate synthetic-data development runner. Meta may use Contributor content for training; keep candidate information in standard mode.</p></details>
++      <p><a class="button button-primary" href="/career-discovery">Open Career Discovery →</a></p>
++    </article>
++    {{end}}{{end}}
++  </section>
++  <section aria-labelledby="external-ai-heading" class="ai-other-connections">
++    <h2 id="external-ai-heading">Other services</h2>
++    <details class="ai-service-group"><summary>API services <span>OpenAI, Anthropic, OpenRouter, custom endpoints</span></summary><div class="ai-connection-grid">{{range .Connections}}{{if or (eq .ID "openai") (eq .ID "anthropic") (eq .ID "openrouter") (eq .ID "compatible")}}{{template "ai-connection" .}}{{end}}{{end}}</div></details>
++    <details class="ai-service-group"><summary>Subscription tools <span>ChatGPT via Codex, Claude Code</span></summary><p class="small-muted">Use separately installed vendor tools and their own sign-in. Subscription allowance is separate from API billing; a detected login does not guarantee available usage.</p><div class="ai-connection-grid">{{range .Connections}}{{if or (eq .ID "codex") (eq .ID "claude-cli")}}{{template "ai-connection" .}}{{end}}{{end}}</div><p class="small-muted">Claude subscription use in a distributed third-party product may require additional permission.</p></details>
++  </section>
++  <section aria-labelledby="local-ai-heading"><details class="ai-service-group"><summary id="local-ai-heading">Ollama <span>Local service or cloud-backed models</span></summary><div class="ai-connection-grid">{{range .Connections}}{{if eq .ID "ollama"}}{{template "ai-connection" .}}{{end}}{{end}}</div><p class="small-muted">A local Ollama connection can forward to cloud inference, depending on the model.</p></details></section>
++  <footer class="ai-hub-footer"><p>Generation requires your authorization. Review AI proposals before using them. Answer proposals must be adopted and saved; cover letters are saved as separate drafts. YourMove does not replace existing drafts automatically.</p><p>Manual writing and preparation remain available without AI.</p></footer>
+@@ -15,2 +26 @@
+-{{template "shell-close"}}
+-</body></html>
++{{template "shell-close" .}}</body></html>
+@@ -19,6 +29,4 @@
+-    <article class="ai-connection-card" id="connection-{{.ID}}">
+-      <div class="ai-connection-top"><h3>{{.Name}}</h3><span class="ai-state ai-state-{{.State}}">{{if eq .State "ready"}}Configured{{else if eq .State "signin"}}Sign in{{else if eq .State "unavailable"}}Not installed{{else}}Setup needed{{end}}</span></div>
+-      <p class="ai-connection-access">{{if eq .ID "ollama"}}{{else if ne .ID "compatible"}}External service · {{end}}{{.Access}}</p>
+-      <p class="ai-connection-detail">{{.Detail}}</p>
+-      <details class="ai-connection-setup"><summary>Setup guidance</summary><p>{{.Setup}}</p></details>
+-    </article>
++<article class="ai-connection-card" id="connection-{{.ID}}">
++  <div class="ai-connection-top"><h3>{{.Name}}</h3><span class="ai-state ai-state-{{.State}}">{{if eq .State "ready"}}Configured{{else if eq .State "signin"}}Sign in needed{{else if eq .State "unavailable"}}Not installed{{else}}Setup needed{{end}}</span></div>
++  <p class="ai-connection-access">{{.Access}}</p><p class="ai-connection-detail">{{.Detail}}</p><details class="ai-connection-setup"><summary>Setup</summary><p>{{.Setup}}</p></details>
++</article>
 diff --git a/templates/career_discovery.html b/templates/career_discovery.html
 new file mode 100644
 index 0000000..05e1d48
@@ -717,3 +1222,13 @@ index 991090b..29f503e 100644
 @@ -7,0 +8,2 @@
 +<p><a href="/career-discovery">Discover an experience with Muse →</a></p>
 +
+diff --git a/templates/job.html b/templates/job.html
+index 1447702..d04339f 100644
+--- a/templates/job.html
++++ b/templates/job.html
+@@ -537,0 +538,5 @@
++      <details data-answer-ai-trace hidden><summary>Evidence Trace</summary>
++        <p class="small-muted">Claims link to exact excerpts from the recorded candidate interview. The source is self-report and is not independently verified.</p>
++        <ol data-answer-ai-trace-claims></ol>
++        <div data-answer-ai-trace-unresolved hidden><h5>Not established by this evidence</h5><ul data-answer-ai-trace-unknowns></ul></div>
++      </details>
