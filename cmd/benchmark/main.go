@@ -42,7 +42,9 @@ func generate(ctx context.Context, prompt, policy string) (string, error) {
 	var result struct {
 		Choices []struct {
 			Finish  string `json:"finish_reason"`
-			Message struct{ Content string `json:"content"` } `json:"message"`
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
 		} `json:"choices"`
 		Usage struct {
 			Prompt     int `json:"prompt_tokens"`
