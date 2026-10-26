@@ -1,0 +1,5 @@
+- Provided Linux and MySQL troubleshooting support for internal teams.
+- Responded to customer tickets about account access and billing questions.
+- Wrote shell scripts to automate routine server log checks.
+- Helped onboard new support hires by shadowing calls and answering questions.
+- Updated internal wiki pages when support procedures changed.
