@@ -1,0 +1,22 @@
+muse: local session messaging disabled: session logging is required
+muse: workspace root: /private/tmp/yourmove-muse-review-b1 (explicit)
+Review of the two files only. Semantic entailment (whether `claim` follows from `quote`) is out of scope: exact `source_id`+`quote` binding stops invented sources, candidate review must still catch paraphrase overreach.
+
+1. Silent answer drop + charged retry — `internal/app/career_discovery.go:164-174`
+
+   Repro: get to pending-retry state (`Question==""`, e.g. after provider failure). `POST /career-discovery/1/next` with `revision`, `consent=yes`, and `answer=<text>`. The `if p.State.Question != ""` guard skips `RecordAnswer`, ignores `answer`, then still does the pending-claim `UPDATE` and `runDiscovery` provider call.
+   Consequence: candidate text lost, one charged request consumed, violating "record candidate text first."
+   Minimum fix: when `Question==""`, reject if `answer` present: `if len(r.PostForm["answer"]) != 0 { 400 }`; only run inference with no answer field.
+
+2. Draft trusts stored proposal without rebinding — `internal/app/career_discovery.go:257-258`, `career-discovery/discovery.go:126-131`
+
+   Repro: `discoveryByID` unmarshals `state` with no source checks; draft path checks only `revision` and `Proposal != nil`. Edit stored `state` JSON to `proposal={source_id:"response-99", quote:"invented", ...}` at current revision, then `POST /career-discovery/1/evidence` with that `revision` → `303` draft with `Supporting source [response-99]: invented` in `source_notes`.
+   Consequence: fabricated source enters `career_evidence` draft provenance without ever passing the `Contains` gate. Still needs human review, but provenance lie is persisted.
+   Minimum fix: repeat the `Next`-style gate in `discoveryEvidenceDraft` before `INSERT`: require some `r` with `r.Source.ID == proposal.SourceID && strings.Contains(r.Source.Text, proposal.Quote)`, else `409/422`.
+
+3. Failed `start` orphans the session — `internal/app/career_discovery.go:136-139`
+
+   Repro: stub `discoveryGenerate` to error, `POST /career-discovery` with `resume`+`consent=yes` → `500 "Reload the interview."` with no ID. Row was already `INSERT`ed; `runDiscovery` bumped revision/notice, but handler discards `id`.
+   Consequence: user cannot address the saved interview for retry; retry means re-entering resume and leaving an orphan row (stale request / duplicate sessions).
+   Minimum fix: on `runDiscovery` error keep `id` in scope: redirect to `/career-discovery/{id}` or include `id`/link in the `500` body, same as the `/next` path where the URL is known.
+

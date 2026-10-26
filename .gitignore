@@ -1,0 +1,5 @@
+.env
+.env.*
+!.env.example
+/discovery
+.DS_Store

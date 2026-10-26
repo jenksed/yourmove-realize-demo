@@ -1,0 +1,99 @@
+{
+  "data": "synthetic only",
+  "mode": "real Meta inference in full host browser UI",
+  "sessions": [
+    {
+      "id": 1,
+      "revision": 7,
+      "state": {
+        "resume": {
+          "id": "resume",
+          "kind": "document_excerpt",
+          "text": "Provided Linux and database troubleshooting support."
+        },
+        "responses": [
+          {
+            "question": "You mentioned providing Linux and database troubleshooting support \u2014 can you describe one specific incident you personally handled, including what you diagnosed, what actions you took yourself to fix it, and whether you owned it alone or collaborated with others?",
+            "source": {
+              "id": "response-1",
+              "kind": "self_report",
+              "text": "I investigated a production MySQL database that was responding slowly. I reviewed MySQL slow query logs and used EXPLAIN to identify inefficient queries. Another team implemented the changes. I did not implement the fix and do not know the performance impact."
+            }
+          }
+        ],
+        "question": "You described diagnosing a slow MySQL issue \u2014 can you describe one specific Linux troubleshooting incident you personally handled, including what you diagnosed, what actions you took yourself, and whether you owned it alone or collaborated with others?",
+        "proposal": {
+          "title": "MySQL slow query diagnosis without implementation",
+          "experience": "Investigated a production MySQL database responding slowly as diagnostic work separate from implementation.",
+          "claim": "Candidate self-reports investigating a slowly responding production MySQL database by reviewing slow query logs and using EXPLAIN to identify inefficient queries, with fix implemented by another team; candidate did not implement the fix and does not know the performance impact.",
+          "source_id": "response-1",
+          "quote": "I investigated a production MySQL database that was responding slowly. I reviewed MySQL slow query logs and used EXPLAIN to identify inefficient queries. Another team implemented the changes. I did not implement the fix and do not know the performance impact.",
+          "unresolved": [
+            "Whether diagnosis was solo or collaborative",
+            "What queries were identified as inefficient",
+            "Performance impact after other team's changes",
+            "Linux troubleshooting specifics"
+          ]
+        }
+      },
+      "evidence_id": 1,
+      "latest_notice": "Muse response received in 6.5 seconds. Proposals need your review. Tokens: 393 input / 1450 output; estimated inference $0.00665; finish: stop."
+    },
+    {
+      "id": 2,
+      "revision": 6,
+      "state": {
+        "resume": {
+          "id": "resume",
+          "kind": "document_excerpt",
+          "text": "Provided Linux and database troubleshooting support."
+        },
+        "responses": [
+          {
+            "question": "Can you describe one specific Linux and database troubleshooting incident you personally handled \u2014 what symptom was reported, what you found, and what you personally did?",
+            "source": {
+              "id": "response-1",
+              "kind": "self_report",
+              "text": "I investigated a production MySQL database that was responding slowly. I reviewed MySQL slow query logs and used EXPLAIN to identify inefficient queries. Another team implemented the changes. I did not implement the fix and do not know the performance impact."
+            }
+          },
+          {
+            "question": "You said you used EXPLAIN to identify inefficient queries \u2014 what specific issue did you find and what exactly did you hand off to the other team?",
+            "source": {
+              "id": "response-2",
+              "kind": "self_report",
+              "text": "EXPLAIN showed a full table scan for a frequently used query. I sent the slow query log entries, EXPLAIN output, and my diagnostic notes to the database engineering team. They owned selecting and implementing the fix. I do not know whether they added an index or changed the query, and I do not know the measured outcome."
+            }
+          }
+        ],
+        "question": "When you handed off the full-table-scan finding, what specific conclusion or suggested next step, if any, did you include in your diagnostic notes to the database engineering team?",
+        "proposal": {
+          "title": "MySQL slow-query diagnosis and handoff to database engineering",
+          "experience": "Diagnosed a frequently used MySQL query with EXPLAIN as full table scan and handed off evidence to database engineering team without implementing a fix.",
+          "claim": "Candidate found via EXPLAIN that a frequently used query was doing a full table scan, sent the slow query log entries, EXPLAIN output, and diagnostic notes to the database engineering team, did not select or implement the fix, and does not know what fix was applied or its measured outcome.",
+          "source_id": "response-2",
+          "quote": "EXPLAIN showed a full table scan for a frequently used query. I sent the slow query log entries, EXPLAIN output, and my diagnostic notes to the database engineering team. They owned selecting and implementing the fix. I do not know whether they added an index or changed the query, and I do not know the measured outcome.",
+          "unresolved": [
+            "Whether the fix was an index or query change is unknown",
+            "Measured performance outcome is unknown",
+            "What specific recommendation, if any, was in the diagnostic notes is unknown"
+          ]
+        }
+      },
+      "evidence_id": 0,
+      "latest_notice": "Muse response received in 9.4 seconds. Proposals need your review. Tokens: 573 input / 1892 output; estimated inference $0.00876; finish: stop."
+    }
+  ],
+  "evidence": [
+    {
+      "id": 1,
+      "title": "MySQL slow query diagnosis without implementation",
+      "situation": "Investigated a production MySQL database responding slowly as diagnostic work separate from implementation.",
+      "actions": "Diagnosed production MySQL performance issues using slow query logs and EXPLAIN to identify inefficient queries. Another team implemented the changes; I did not implement the fix. Performance impact is unknown.",
+      "status": "reviewed",
+      "revision": 2,
+      "outcome_state": "unknown",
+      "source_writing": "Resume excerpt (document-derived, supplied by candidate) [resume]:\nProvided Linux and database troubleshooting support.\n\nMuse question:\nYou mentioned providing Linux and database troubleshooting support \u2014 can you describe one specific incident you personally handled, including what you diagnosed, what actions you took yourself to fix it, and whether you owned it alone or collaborated with others?\nCandidate response (self-report) [response-1]:\nI investigated a production MySQL database that was responding slowly. I reviewed MySQL slow query logs and used EXPLAIN to identify inefficient queries. Another team implemented the changes. I did not implement the fix and do not know the performance impact.\n"
+    }
+  ]
+}

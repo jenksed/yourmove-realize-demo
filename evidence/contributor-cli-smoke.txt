@@ -1,0 +1,7 @@
+Synthetic-data demo. Input is sent to Meta. No claim is approved or saved to YourMove by this runner.
+CONTRIBUTOR MODE: Meta may use submitted content for training. Enter only synthetic/public development examples. Use -standard for standard mode.
+Model: muse-spark-1.3-contributor; elapsed: 3.67s; usage: {"completion_tokens":353,"prompt_tokens":363,"total_tokens":716,"completion_tokens_details":{"reasoning_tokens":305},"prompt_tokens_details":{"cached_tokens":0}}
+
+Paste one synthetic resume excerpt (one line):
+Muse: Can you walk me through one specific Linux or database troubleshooting incident you personally handled — what symptoms were reported, and what did you personally do to diagnose it?
+Candidate response (blank to stop):

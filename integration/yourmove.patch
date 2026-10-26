@@ -1,0 +1,719 @@
+diff --git a/go.mod b/go.mod
+index 1d11b44..960b028 100644
+--- a/go.mod
++++ b/go.mod
+@@ -4,0 +5,4 @@ go 1.27.2
++replace github.com/jenksed/yourmove-career-discovery => ./career-discovery
++
++require github.com/jenksed/yourmove-career-discovery v0.0.0
++
+diff --git a/internal/app/app.go b/internal/app/app.go
+index 80c5924..4937159 100644
+--- a/internal/app/app.go
++++ b/internal/app/app.go
+@@ -43,0 +44 @@ type appResources struct {
++	careerDiscoveryTemplate       *template.Template
+@@ -73,0 +75 @@ func New(config Config) (*App, error) {
++		{"templates/career_discovery.html", &resources.careerDiscoveryTemplate},
+@@ -83,0 +86,3 @@ func New(config Config) (*App, error) {
++	if err := initializeDiscovery(config.DB); err != nil {
++		return nil, fmt.Errorf("initialize Career Discovery: %w", err)
++	}
+diff --git a/internal/app/app_http.go b/internal/app/app_http.go
+index d9af0e3..206032f 100644
+--- a/internal/app/app_http.go
++++ b/internal/app/app_http.go
+@@ -14,0 +15,2 @@ type App struct {
++	discoveryMu               sync.Mutex                                            // one charged discovery request at a time
++	discoveryGenerate         func(context.Context, string, string) (string, error) // test seam; production uses Meta
+@@ -52,0 +55,5 @@ func newMux(app *App) http.Handler {
++	mux.HandleFunc("GET /career-discovery", app.careerDiscoveryPage)
++	mux.HandleFunc("POST /career-discovery", app.startCareerDiscovery)
++	mux.HandleFunc("GET /career-discovery/{id}", app.careerDiscoveryPage)
++	mux.HandleFunc("POST /career-discovery/{id}/next", app.nextCareerDiscovery)
++	mux.HandleFunc("POST /career-discovery/{id}/evidence", app.discoveryEvidenceDraft)
+diff --git a/internal/app/career_discovery.go b/internal/app/career_discovery.go
+new file mode 100644
+index 0000000..4d1d99d
+--- /dev/null
++++ b/internal/app/career_discovery.go
+@@ -0,0 +1,311 @@
++package app
++
++import (
++	"context"
++	"database/sql"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/http"
++	"strconv"
++	"strings"
++	"time"
++
++	discovery "github.com/jenksed/yourmove-career-discovery"
++	coverprovider "github.com/jenksed/yourmove-go/internal/coverletter/provider"
++)
++
++// Only interview state is new storage; approved evidence stays in career_evidence.
++func initializeDiscovery(db *sql.DB) error {
++	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS career_discovery (
++	 id INTEGER PRIMARY KEY, revision INTEGER NOT NULL DEFAULT 1,
++	 state TEXT NOT NULL, evidence_id INTEGER NOT NULL DEFAULT 0,
++	 notice TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL)`)
++	return err
++}
++
++type discoveryPage struct {
++	ID, Revision, EvidenceID int64
++	State                    discovery.State
++	Notice                   string
++	CanAnswer                bool
++	Sessions                 []discoverySessionLink
++}
++type discoverySessionLink struct {
++	ID        int64
++	CreatedAt string
++}
++
++func (a *App) discoveryByID(id int64) (discoveryPage, error) {
++	var p discoveryPage
++	var raw string
++	p.ID = id
++	err := a.db.QueryRow(`SELECT revision,state,evidence_id,notice FROM career_discovery WHERE id=?`, id).Scan(&p.Revision, &raw, &p.EvidenceID, &p.Notice)
++	if err != nil {
++		return p, err
++	}
++	if json.Unmarshal([]byte(raw), &p.State) != nil {
++		return p, discovery.ErrInvalid
++	}
++	p.CanAnswer = p.EvidenceID == 0 && p.State.Question != "" && len(p.State.Responses) < discovery.MaxResponses
++	return p, nil
++}
++
++func (a *App) careerDiscoveryPage(w http.ResponseWriter, r *http.Request) {
++	var p discoveryPage
++	if raw := r.PathValue("id"); raw != "" {
++		id, err := strconv.ParseInt(raw, 10, 64)
++		if err != nil || id < 1 {
++			http.NotFound(w, r)
++			return
++		}
++		p, err = a.discoveryByID(id)
++		if errors.Is(err, sql.ErrNoRows) {
++			http.NotFound(w, r)
++			return
++		}
++		if err != nil {
++			http.Error(w, "Unable to load interview", 500)
++			return
++		}
++	} else {
++		rows, err := a.db.Query(`SELECT id,created_at FROM career_discovery ORDER BY id DESC LIMIT 20`)
++		if err != nil {
++			http.Error(w, "Unable to load interviews", 500)
++			return
++		}
++		defer rows.Close()
++		for rows.Next() {
++			var link discoverySessionLink
++			if err := rows.Scan(&link.ID, &link.CreatedAt); err != nil {
++				http.Error(w, "Unable to load interviews", 500)
++				return
++			}
++			p.Sessions = append(p.Sessions, link)
++		}
++		if rows.Err() != nil {
++			http.Error(w, "Unable to load interviews", 500)
++			return
++		}
++	}
++	w.Header().Set("Content-Type", "text/html; charset=utf-8")
++	w.Header().Set("Cache-Control", "private, no-store")
++	_ = a.resources.careerDiscoveryTemplate.Execute(w, p)
++}
++
++func discoveryConsent(w http.ResponseWriter, r *http.Request) bool {
++	if !parseLocalForm(w, r, 64<<10) {
++		return false
++	}
++	if len(r.PostForm["consent"]) != 1 || r.PostForm.Get("consent") != "yes" {
++		http.Error(w, "Authorize sending this interview to Meta before continuing", 400)
++		return false
++	}
++	return true
++}
++
++func (a *App) startCareerDiscovery(w http.ResponseWriter, r *http.Request) {
++	if !discoveryConsent(w, r) {
++		return
++	}
++	if !a.discoveryMu.TryLock() {
++		http.Error(w, "A Muse interview request is already in progress. Wait before retrying.", http.StatusConflict)
++		return
++	}
++	defer a.discoveryMu.Unlock()
++	if len(r.PostForm["resume"]) != 1 {
++		http.Error(w, "Provide one resume excerpt", 400)
++		return
++	}
++	s, err := discovery.New(r.PostForm.Get("resume"))
++	if err != nil {
++		http.Error(w, "Use a resume excerpt of 1–8000 bytes", 422)
++		return
++	}
++	raw, _ := json.Marshal(s)
++	result, err := a.db.Exec(`INSERT INTO career_discovery(state,created_at) VALUES(?,?)`, string(raw), time.Now().UTC().Format(time.RFC3339Nano))
++	if err != nil {
++		http.Error(w, "Unable to save interview", 500)
++		return
++	}
++	id, err := result.LastInsertId()
++	if err != nil {
++		http.Error(w, "Unable to locate saved interview", 500)
++		return
++	}
++	p := discoveryPage{ID: id, Revision: 1, State: s}
++	if err := a.runDiscovery(r.Context(), p); err != nil {
++		http.Error(w, fmt.Sprintf("Interview input saved, but the model result could not be saved. Return to /career-discovery/%d to recover it.", id), 500)
++		return
++	}
++	http.Redirect(w, r, fmt.Sprintf("/career-discovery/%d", id), http.StatusSeeOther)
++}
++
++func (a *App) nextCareerDiscovery(w http.ResponseWriter, r *http.Request) {
++	if !discoveryConsent(w, r) {
++		return
++	}
++	if !a.discoveryMu.TryLock() {
++		http.Error(w, "A Muse interview request is already in progress. Wait before retrying.", http.StatusConflict)
++		return
++	}
++	defer a.discoveryMu.Unlock()
++	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
++	p, err := a.discoveryByID(id)
++	if err != nil {
++		http.NotFound(w, r)
++		return
++	}
++	revision, err := parseCareerEvidenceRevision(r)
++	if err != nil || revision != p.Revision || p.EvidenceID != 0 {
++		http.Error(w, "Interview changed. Reload before continuing.", 409)
++		return
++	}
++	if p.State.Question != "" {
++		if len(r.PostForm["answer"]) != 1 {
++			http.Error(w, "Provide one response", 400)
++			return
++		}
++		p.State, err = discovery.RecordAnswer(p.State, r.PostForm.Get("answer"))
++		if err != nil {
++			http.Error(w, "Use a response of 1–2000 bytes; interviews allow up to six responses", 422)
++			return
++		}
++	} else if len(r.PostForm["answer"]) != 0 {
++		http.Error(w, "This is a retry of saved input. Reload before adding another response; no request was sent.", http.StatusBadRequest)
++		return
++	}
++	// Claim a pending revision before inference. A duplicate POST cannot send a
++	// second charged request from the same page. Record candidate text first.
++	raw, _ := json.Marshal(p.State)
++	result, err := a.db.Exec(`UPDATE career_discovery SET state=?,notice='Request in progress. If interrupted, retry from this page.',revision=revision+1 WHERE id=? AND revision=? AND evidence_id=0`, string(raw), id, p.Revision)
++	if err != nil {
++		http.Error(w, "Unable to save response", 500)
++		return
++	}
++	n, _ := result.RowsAffected()
++	if n != 1 {
++		http.Error(w, "Interview changed. Reload before continuing.", 409)
++		return
++	}
++	p.Revision++
++	if err := a.runDiscovery(r.Context(), p); err != nil {
++		http.Error(w, "Your response is saved, but the model result could not be saved. Reload the interview.", 500)
++		return
++	}
++	http.Redirect(w, r, fmt.Sprintf("/career-discovery/%d", id), http.StatusSeeOther)
++}
++
++func (a *App) runDiscovery(ctx context.Context, p discoveryPage) error {
++	generate := a.discoveryGenerate
++	var metrics coverprovider.RequestMetrics
++	var err error
++	if generate == nil {
++		var runner coverprovider.Runner
++		runner, err = coverprovider.ConfigureMeta()
++		if err == nil {
++			generate = func(ctx context.Context, prompt, instructions string) (string, error) {
++				return runner.GenerateDiscovery(ctx, prompt, instructions, func(m coverprovider.RequestMetrics) { metrics = m })
++			}
++		}
++	}
++	started := time.Now()
++	next := p.State
++	if err == nil {
++		next, err = discovery.Next(ctx, generate, p.State)
++	}
++	notice := fmt.Sprintf("Muse response received in %.1f seconds. Proposals need your review.", time.Since(started).Seconds())
++	if err != nil {
++		notice = "Muse request did not produce usable interview output (" + coverprovider.ErrorNotice(err) + "). Your recorded input is saved; no evidence was approved."
++		if errors.Is(err, discovery.ErrInvalid) {
++			notice = "Muse output did not pass source or format checks. Your input is saved; retry or start a new interview. No evidence was approved."
++		}
++	}
++	if metrics.PromptTokens > 0 || metrics.CompletionTokens > 0 {
++		// Standard-mode estimate, not an account charge; rates checked 2026-10-26.
++		cached := min(metrics.CachedTokens, metrics.PromptTokens)
++		cost := (float64(metrics.PromptTokens-cached)*1.25 + float64(cached)*0.15 + float64(metrics.CompletionTokens)*4.25) / 1e6
++		notice += fmt.Sprintf(" Tokens: %d input / %d output; estimated inference $%.5f; finish: %s.", metrics.PromptTokens, metrics.CompletionTokens, cost, metrics.FinishReason)
++	}
++	raw, _ := json.Marshal(next)
++	// A late result cannot overwrite a newer candidate response or review draft.
++	result, err := a.db.Exec(`UPDATE career_discovery SET state=?,notice=?,revision=revision+1 WHERE id=? AND revision=? AND evidence_id=0`, string(raw), notice, p.ID, p.Revision)
++	if err != nil {
++		return err
++	}
++	n, err := result.RowsAffected()
++	if err != nil {
++		return err
++	}
++	if n != 1 {
++		return ErrCareerEvidenceStale
++	}
++	return nil
++}
++
++func (a *App) discoveryEvidenceDraft(w http.ResponseWriter, r *http.Request) {
++	if !parseLocalForm(w, r, 4<<10) {
++		return
++	}
++	id, _ := strconv.ParseInt(r.PathValue("id"), 10, 64)
++	p, err := a.discoveryByID(id)
++	if err != nil {
++		http.NotFound(w, r)
++		return
++	}
++	if p.EvidenceID != 0 {
++		http.Redirect(w, r, fmt.Sprintf("/career-evidence/%d", p.EvidenceID), 303)
++		return
++	}
++	revision, err := parseCareerEvidenceRevision(r)
++	if err != nil || revision != p.Revision || p.State.Proposal == nil {
++		http.Error(w, "Reload the current proposal before creating a draft", 409)
++		return
++	}
++	if p.State.ValidateProposal() != nil {
++		http.Error(w, "The proposal source no longer resolves to a recorded response. No draft was saved.", http.StatusUnprocessableEntity)
++		return
++	}
++	proposal := p.State.Proposal
++	notes := fmt.Sprintf("AI proposal from Career Discovery interview %d. Self-report; not independently verified.\nSupporting source [%s]:\n%s", id, proposal.SourceID, proposal.Quote)
++	if len(proposal.Unresolved) > 0 {
++		notes += "\nUnresolved (not established facts):\n" + strings.Join(proposal.Unresolved, "\n")
++	}
++	content := careerEvidenceContent{Title: proposal.Title, Situation: proposal.Experience, Actions: proposal.Claim, OutcomeState: "unknown", SourceNotes: notes}
++	if !content.valid() {
++		http.Error(w, "Proposal is too long for Career Evidence; continue discovery", 422)
++		return
++	}
++	tx, err := a.db.Begin()
++	if err != nil {
++		http.Error(w, "Unable to save draft", 500)
++		return
++	}
++	defer tx.Rollback()
++	now := time.Now().UTC().Format(time.RFC3339Nano)
++	result, err := tx.Exec(`INSERT INTO career_evidence(title,situation,actions,outcome_state,source_notes,source_writing,status,revision,created_at,updated_at) VALUES(?,?,?,'unknown',?,?,'draft',1,?,?)`, content.Title, content.Situation, content.Actions, content.SourceNotes, p.State.Transcript(), now, now)
++	if err != nil {
++		http.Error(w, "Unable to save draft", 500)
++		return
++	}
++	evidenceID, err := result.LastInsertId()
++	if err != nil {
++		http.Error(w, "Unable to locate draft", 500)
++		return
++	}
++	result, err = tx.Exec(`UPDATE career_discovery SET evidence_id=?,revision=revision+1 WHERE id=? AND revision=? AND evidence_id=0`, evidenceID, id, p.Revision)
++	if err != nil {
++		http.Error(w, "Unable to link draft", 500)
++		return
++	}
++	n, _ := result.RowsAffected()
++	if n != 1 {
++		http.Error(w, "Interview changed. Reload before saving.", 409)
++		return
++	}
++	if tx.Commit() != nil {
++		http.Error(w, "Unable to commit draft", 500)
++		return
++	}
++	http.Redirect(w, r, fmt.Sprintf("/career-evidence/%d", evidenceID), http.StatusSeeOther)
++}
+diff --git a/internal/app/career_discovery_test.go b/internal/app/career_discovery_test.go
+new file mode 100644
+index 0000000..34848fe
+--- /dev/null
++++ b/internal/app/career_discovery_test.go
+@@ -0,0 +1,155 @@
++package app
++
++import (
++	"context"
++	"errors"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"path/filepath"
++	"strings"
++	"testing"
++
++	"github.com/jenksed/yourmove-go/internal/storage"
++)
++
++func TestDiscoveryConsentSourcesReviewAndRestart(t *testing.T) {
++	a, dir := testWorkspace(t)
++	mux := newMux(a)
++	calls := 0
++	a.discoveryGenerate = func(_ context.Context, prompt, policy string) (string, error) {
++		calls++
++		if calls == 1 {
++			return `{"question":"What did you personally do during the database investigation?","proposal":null}`, nil
++		}
++		if !strings.Contains(prompt, "Another team implemented") {
++			t.Fatal("response absent from adaptive prompt")
++		}
++		return `{"question":"Do you know what the resulting performance impact was?","proposal":{"title":"MySQL diagnosis","experience":"Investigated production query performance","claim":"Reviewed MySQL slow query logs and used EXPLAIN","source_id":"response-1","quote":"I reviewed MySQL slow query logs and used EXPLAIN. Another team implemented the changes.","unresolved":["Performance impact unknown; implementation belongs to another team."]}}`, nil
++	}
++	values := url.Values{"resume": {"Provided Linux and database troubleshooting support."}}
++	if got := postCareerEvidence(mux, "/career-discovery", values); got.Code != 400 || calls != 0 {
++		t.Fatal("inference without consent")
++	}
++	values.Set("consent", "yes")
++	if got := postCareerEvidence(mux, "/career-discovery", values); got.Code != 303 {
++		t.Fatal(got.Code, got.Body.String())
++	}
++	p, err := a.discoveryByID(1)
++	if err != nil || p.State.Question == "" {
++		t.Fatal(p, err)
++	}
++	answer := "I reviewed MySQL slow query logs and used EXPLAIN. Another team implemented the changes."
++	values = url.Values{"revision": {"2"}, "answer": {answer}, "consent": {"yes"}}
++	if got := postCareerEvidence(mux, "/career-discovery/1/next", values); got.Code != 303 {
++		t.Fatal(got.Code, got.Body.String())
++	}
++	if got := postCareerEvidence(mux, "/career-discovery/1/next", values); got.Code != 409 || calls != 2 {
++		t.Fatal("stale response generated again")
++	}
++	if got := postCareerEvidence(mux, "/career-discovery/1/evidence", url.Values{"revision": {"4"}}); got.Code != 303 {
++		t.Fatal(got.Code, got.Body.String())
++	}
++	e, err := careerEvidenceByID(a.db, 1)
++	if err != nil || e.Status != "draft" || e.OutcomeState != "unknown" || !strings.Contains(e.SourceWriting, answer) || !strings.Contains(e.SourceNotes, "response-1") {
++		t.Fatal(e, err)
++	}
++	form := careerEvidenceForm(e.Revision, e.content())
++	form.Set("actions", "Diagnosed slow queries; another team implemented changes.")
++	if got := postCareerEvidence(mux, "/career-evidence/1/review", form); got.Code != 400 {
++		t.Fatal("review accepted without confirmation")
++	}
++	form.Set("confirm_review", "yes")
++	if got := postCareerEvidence(mux, "/career-evidence/1/review", form); got.Code != 303 {
++		t.Fatal(got.Code, got.Body.String())
++	}
++	if err := a.db.Close(); err != nil {
++		t.Fatal(err)
++	}
++	db, err := storage.OpenDB(filepath.Join(dir, "jobs.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer db.Close()
++	restarted := newTestApp(t, db, filepath.Join(dir, "resumes"))
++	e, err = careerEvidenceByID(db, 1)
++	if err != nil || e.Status != "reviewed" || !strings.Contains(e.Actions, "another team") || !strings.Contains(e.SourceWriting, answer) {
++		t.Fatal(e, err)
++	}
++	p, err = restarted.discoveryByID(1)
++	if err != nil || p.EvidenceID != 1 || p.State.Responses[0].Source.Text != answer {
++		t.Fatal(p, err)
++	}
++	page := httptest.NewRecorder()
++	req := httptest.NewRequest(http.MethodGet, "http://localhost/career-discovery/1", nil)
++	newMux(restarted).ServeHTTP(page, req)
++	if page.Code != 200 || !strings.Contains(page.Body.String(), "Review saved evidence") {
++		t.Fatal(page.Code, page.Body.String())
++	}
++}
++
++func TestDiscoveryFailureRetainsCandidateInput(t *testing.T) {
++	a, _ := testWorkspace(t)
++	mux := newMux(a)
++	a.discoveryGenerate = func(context.Context, string, string) (string, error) {
++		return `{"question":"What did you investigate?","proposal":null}`, nil
++	}
++	postCareerEvidence(mux, "/career-discovery", url.Values{"resume": {"Database support"}, "consent": {"yes"}})
++	a.discoveryGenerate = func(context.Context, string, string) (string, error) { return "", errors.New("provider unavailable") }
++	postCareerEvidence(mux, "/career-discovery/1/next", url.Values{"revision": {"2"}, "answer": {"I reviewed logs but did not implement the fix."}, "consent": {"yes"}})
++	p, err := a.discoveryByID(1)
++	if err != nil || len(p.State.Responses) != 1 || p.State.Question != "" || p.State.Proposal != nil || !strings.Contains(p.Notice, "input is saved") {
++		t.Fatal(p, err)
++	}
++	var n int
++	if err := a.db.QueryRow(`SELECT COUNT(*) FROM career_evidence`).Scan(&n); err != nil || n != 0 {
++		t.Fatal("failure created evidence", err)
++	}
++}
++
++func TestDiscoveryBusyRequestDoesNotDispatchOrCreateSession(t *testing.T) {
++	a, _ := testWorkspace(t)
++	a.discoveryGenerate = func(context.Context, string, string) (string, error) {
++		t.Fatal("concurrent charged request dispatched")
++		return "", nil
++	}
++	a.discoveryMu.Lock()
++	defer a.discoveryMu.Unlock()
++	got := postCareerEvidence(newMux(a), "/career-discovery", url.Values{"resume": {"Database support"}, "consent": {"yes"}})
++	if got.Code != http.StatusConflict {
++		t.Fatal(got.Code, got.Body.String())
++	}
++	var n int
++	if err := a.db.QueryRow(`SELECT COUNT(*) FROM career_discovery`).Scan(&n); err != nil || n != 0 {
++		t.Fatal("busy request created session", err)
++	}
++}
++
++func TestDiscoveryRetryRejectsUnexpectedAnswer(t *testing.T) {
++	a, _ := testWorkspace(t)
++	mux := newMux(a)
++	calls := 0
++	a.discoveryGenerate = func(context.Context, string, string) (string, error) { calls++; return "", errors.New("unavailable") }
++	postCareerEvidence(mux, "/career-discovery", url.Values{"resume": {"Database support"}, "consent": {"yes"}})
++	got := postCareerEvidence(mux, "/career-discovery/1/next", url.Values{"revision": {"2"}, "answer": {"Do not drop this answer"}, "consent": {"yes"}})
++	if got.Code != 400 || calls != 1 {
++		t.Fatal("retry silently discarded text or sent another request", got.Code, calls)
++	}
++}
++
++func TestDiscoveryDraftRechecksStoredSource(t *testing.T) {
++	a, _ := testWorkspace(t)
++	mux := newMux(a)
++	raw := `{"resume":{"id":"resume","kind":"document_excerpt","text":"Database support"},"responses":[{"question":"What did you do?","source":{"id":"response-1","kind":"self_report","text":"I reviewed logs."}}],"proposal":{"title":"Investigation","experience":"A slow database","claim":"Reviewed logs","source_id":"response-99","quote":"I reviewed logs.","unresolved":[]}}`
++	if _, err := a.db.Exec(`INSERT INTO career_discovery(state,created_at) VALUES(?,'synthetic')`, raw); err != nil {
++		t.Fatal(err)
++	}
++	got := postCareerEvidence(mux, "/career-discovery/1/evidence", url.Values{"revision": {"1"}})
++	if got.Code != 422 {
++		t.Fatal("unresolved source persisted", got.Code, got.Body.String())
++	}
++	var n int
++	if err := a.db.QueryRow(`SELECT COUNT(*) FROM career_evidence`).Scan(&n); err != nil || n != 0 {
++		t.Fatal("invalid source created evidence", err)
++	}
++}
+diff --git a/internal/coverletter/provider/meta_discovery_test.go b/internal/coverletter/provider/meta_discovery_test.go
+new file mode 100644
+index 0000000..a22fee3
+--- /dev/null
++++ b/internal/coverletter/provider/meta_discovery_test.go
+@@ -0,0 +1,43 @@
++package provider
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++)
++
++func TestMetaDiscoveryCompatibleRequestAndMetrics(t *testing.T) {
++	t.Setenv("MODEL_API_KEY", "synthetic-unit-key")
++	runner, err := ConfigureMeta()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if runner.backend.Model != "muse-spark-1.3" || runner.backend.URL != "https://api.meta.ai/v1/chat/completions" {
++		t.Fatal("wrong Meta configuration")
++	}
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		if r.Header.Get("Authorization") != "Bearer synthetic-unit-key" {
++			t.Error("missing credential mapping")
++		}
++		var body map[string]any
++		if json.NewDecoder(r.Body).Decode(&body) != nil {
++			t.Fatal("invalid request")
++		}
++		if body["reasoning_effort"] != "low" || body["max_tokens"] != float64(2048) || body["response_format"].(map[string]any)["type"] != "json_object" {
++			t.Error("unbounded or invalid Muse structured request")
++		}
++		fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"content":"{\"question\":\"What did you do?\",\"proposal\":null}"}}],"usage":{"prompt_tokens":400,"completion_tokens":1400,"prompt_tokens_details":{"cached_tokens":100}}}`)
++	}))
++	defer server.Close()
++	backend := runner.backend
++	backend.URL = server.URL
++	var metrics RequestMetrics
++	backend.observe = func(m RequestMetrics) { metrics = m }
++	text, err := runProviderProfile(context.Background(), backend, "synthetic context", "trusted discovery policy", nil, true)
++	if err != nil || text == "" || metrics.PromptTokens != 400 || metrics.CompletionTokens != 1400 || metrics.CachedTokens != 100 || metrics.FinishReason != "stop" {
++		t.Fatal(text, metrics, err)
++	}
++}
+diff --git a/internal/coverletter/provider/providers.go b/internal/coverletter/provider/providers.go
+index 32fd12f..3b26155 100644
+--- a/internal/coverletter/provider/providers.go
++++ b/internal/coverletter/provider/providers.go
+@@ -15,0 +16,2 @@ import (
++
++	discovery "github.com/jenksed/yourmove-career-discovery"
+@@ -26,0 +29,17 @@ type coverBackend struct {
++
++	metaDiscovery bool
++	observe       func(RequestMetrics)
++}
++
++// RequestMetrics deliberately excludes prompts, credentials and model content.
++type RequestMetrics struct {
++	PromptTokens     int    `json:"prompt_tokens"`
++	CompletionTokens int    `json:"completion_tokens"`
++	CachedTokens     int    `json:"cached_tokens"`
++	FinishReason     string `json:"finish_reason"`
++}
++
++func (r Runner) GenerateDiscovery(ctx context.Context, prompt, instructions string, observe func(RequestMetrics)) (string, error) {
++	backend := r.backend
++	backend.observe = observe
++	return runProviderProfile(ctx, backend, prompt, instructions, nil, true)
+@@ -49,0 +69,13 @@ type Runner struct {
++// ConfigureMeta reuses the compatible transport without mutating process-wide
++// provider settings. Discovery always uses standard mode, never Contributor.
++func ConfigureMeta() (Runner, error) {
++	key := os.Getenv("MODEL_API_KEY")
++	if strings.TrimSpace(key) == "" || strings.ContainsAny(key, "\r\n") {
++		return Runner{}, errCoverAPIKey
++	}
++	return Runner{provider: "compatible", backend: coverBackend{
++		Provider: "compatible", Model: discovery.Model,
++		URL: discovery.Endpoint, APIKey: key, metaDiscovery: true,
++	}}, nil
++}
++
+@@ -251,0 +284,6 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
++	if backend.metaDiscovery {
++		fields := request.(map[string]any)
++		fields["max_tokens"] = 2048
++		fields["reasoning_effort"] = "low"
++		fields["response_format"] = map[string]string{"type": "json_object"}
++	}
+@@ -312,0 +351,21 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
++	if backend.observe != nil {
++		var metadata struct {
++			Usage struct {
++				Prompt     int `json:"prompt_tokens"`
++				Completion int `json:"completion_tokens"`
++				Details    struct {
++					Cached int `json:"cached_tokens"`
++				} `json:"prompt_tokens_details"`
++			} `json:"usage"`
++			Choices []struct {
++				Reason string `json:"finish_reason"`
++			} `json:"choices"`
++		}
++		if json.Unmarshal(limited, &metadata) == nil {
++			m := RequestMetrics{PromptTokens: metadata.Usage.Prompt, CompletionTokens: metadata.Usage.Completion, CachedTokens: metadata.Usage.Details.Cached}
++			if len(metadata.Choices) > 0 {
++				m.FinishReason = metadata.Choices[0].Reason
++			}
++			backend.observe(m)
++		}
++	}
+diff --git a/scripts/run-discovery-demo.py b/scripts/run-discovery-demo.py
+new file mode 100644
+index 0000000..93a0836
+--- /dev/null
++++ b/scripts/run-discovery-demo.py
+@@ -0,0 +1,34 @@
++#!/usr/bin/env python3
++"""Launch an already built Hackathon binary with an isolated synthetic workspace.
++
++Loads only MODEL_API_KEY from the local ignored .env, without shell evaluation.
++"""
++import os
++from pathlib import Path
++import shlex
++import sys
++
++if len(sys.argv) != 3 or not Path(sys.argv[2]).is_absolute():
++    raise SystemExit("Usage: python3 scripts/run-discovery-demo.py /absolute/binary /absolute/synthetic-workspace")
++env_file = Path(__file__).resolve().parent.parent / ".env"
++if not os.environ.get("MODEL_API_KEY") and env_file.exists():
++    for line in env_file.read_text().splitlines():
++        line = line.strip()
++        if line.startswith("export "):
++            line = line[7:]
++        key, sep, value = line.partition("=")
++        if sep and key.strip() == "MODEL_API_KEY":
++            try:
++                parts = shlex.split(value, comments=True)
++            except ValueError:
++                raise SystemExit("MODEL_API_KEY assignment could not be parsed") from None
++            if len(parts) == 1:
++                os.environ["MODEL_API_KEY"] = parts[0]
++if not os.environ.get("MODEL_API_KEY"):
++    raise SystemExit("Set MODEL_API_KEY in the environment or the ignored .env")
++os.environ["YOURMOVE_DATA_DIR"] = sys.argv[2]
++os.environ.setdefault("YOURMOVE_HTTP_PORT", "3019")
++os.environ["YOURMOVE_COMPAT_URL"] = "https://api.meta.ai/v1/chat/completions"
++os.environ["YOURMOVE_COMPAT_MODEL"] = "muse-spark-1.3"
++os.environ["YOURMOVE_COMPAT_API_KEY"] = os.environ["MODEL_API_KEY"]
++os.execvp(sys.argv[1], [sys.argv[1]])
+diff --git a/templates/career_discovery.html b/templates/career_discovery.html
+new file mode 100644
+index 0000000..05e1d48
+--- /dev/null
++++ b/templates/career_discovery.html
+@@ -0,0 +1,37 @@
++<!doctype html>
++<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Career Discovery · YourMove</title><link rel="stylesheet" href="/static/styles.css"><script defer src="/static/ui.js"></script></head><body>
++{{template "shell-open" "career-evidence"}}
++<nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/career-evidence">Career Evidence</a><span aria-hidden="true">/</span><span>Career Discovery</span></nav>
++<div class="page-heading"><div><h1>Career Discovery</h1><p class="page-description">Explore one experience with Muse. You decide which claims accurately represent you.</p></div></div>
++<div class="career-evidence-editor">
++{{if .ID}}
++  {{if .Notice}}<p class="local-save-confirmation" role="status">{{.Notice}}</p>{{end}}
++  {{if .EvidenceID}}
++    <h2>Your evidence draft is ready for review</h2><p><a class="button button-primary" href="/career-evidence/{{.EvidenceID}}">Review saved evidence</a></p>
++  {{else}}
++    {{if .State.Proposal}}<section aria-labelledby="proposal-title"><h2 id="proposal-title">Proposed experience</h2><h3>{{.State.Proposal.Title}}</h3><p>{{.State.Proposal.Experience}}</p><p><strong>Proposed claim:</strong> {{.State.Proposal.Claim}}</p>
++      <details><summary>Inspect supporting source · {{.State.Proposal.SourceID}}</summary><p class="small-muted">Candidate self-report; not independently verified. The full recorded response appears below.</p><pre class="evidence-text">{{.State.Proposal.Quote}}</pre></details>
++      {{if .State.Proposal.Unresolved}}<h3>Still unresolved</h3><ul>{{range .State.Proposal.Unresolved}}<li>{{.}}</li>{{end}}</ul>{{end}}
++      <form method="POST" action="/career-discovery/{{.ID}}/evidence"><input type="hidden" name="revision" value="{{.Revision}}"><p class="small-muted">This creates an editable draft. Approval requires your confirmation in Career Evidence.</p><button class="button button-primary" type="submit">Create evidence draft for review</button></form>
++    </section>{{end}}
++    {{if .CanAnswer}}<section><h2>Muse asks</h2><p>{{.State.Question}}</p>
++      <form method="POST" action="/career-discovery/{{.ID}}/next" class="career-evidence-form"><input type="hidden" name="revision" value="{{.Revision}}">
++        <div class="field"><label for="discovery-answer">Your response</label><textarea id="discovery-answer" name="answer" rows="5" maxlength="2000" required></textarea></div>
++        <label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send this response, the résumé excerpt, and earlier interview responses to Meta for this request (muse-spark-1.3, standard mode).</span></label>
++        <button class="button button-secondary" type="submit">Respond and continue</button>
++      </form></section>
++    {{else if not .State.Question}}<form method="POST" action="/career-discovery/{{.ID}}/next"><input type="hidden" name="revision" value="{{.Revision}}"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send the saved interview to Meta for another request.</span></label><button class="button button-secondary" type="submit">Retry Muse request</button></form>
++    {{else}}<p>This interview reached its six-response limit. Review the proposal or begin another interview.</p>{{end}}
++  {{end}}
++  <details class="career-evidence-source"><summary>Recorded résumé and responses</summary><h3>Before discovery · résumé excerpt</h3><pre class="evidence-text">{{.State.Resume.Text}}</pre>{{range .State.Responses}}<h3>Muse asked</h3><p>{{.Question}}</p><p class="small-muted">Candidate self-report · {{.Source.ID}}</p><pre class="evidence-text">{{.Source.Text}}</pre>{{end}}</details>
++  <p><a href="/career-discovery">All interviews / start another</a></p>
++{{else}}
++  <form method="POST" action="/career-discovery" class="career-evidence-form">
++    <div class="field"><label for="discovery-resume">Résumé excerpt to explore</label><textarea id="discovery-resume" name="resume" rows="5" maxlength="8000" placeholder="Provided Linux and database troubleshooting support." required></textarea><small>Paste an excerpt you want to develop. Use synthetic information for public demonstrations.</small></div>
++    <label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send this excerpt to Meta to begin an interview with muse-spark-1.3 (standard mode). Your interview is saved locally. AI proposals require my review before they represent my experience.</span></label>
++    <button class="button button-primary" type="submit">Begin discovery</button>
++  </form>
++  {{if .Sessions}}<h2>Saved interviews</h2><ul>{{range .Sessions}}<li><a href="/career-discovery/{{.ID}}">Interview {{.ID}}</a> · <time datetime="{{.CreatedAt}}">{{humanDate .CreatedAt}}</time></li>{{end}}</ul>{{end}}
++{{end}}
++</div>
++{{template "shell-close" .}}</body></html>
+diff --git a/templates/career_evidence.html b/templates/career_evidence.html
+index 991090b..29f503e 100644
+--- a/templates/career_evidence.html
++++ b/templates/career_evidence.html
+@@ -7,0 +8,2 @@
++<p><a href="/career-discovery">Discover an experience with Muse →</a></p>
++
