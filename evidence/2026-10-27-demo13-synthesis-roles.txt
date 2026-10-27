@@ -1,0 +1,14 @@
+STEP 5: synthesize status=200
+STEP 6: connections=2 exact_quotes_shown=6 first_quote=During a payroll slowdown I personally checked the MySQL slow query log and used EXPLAIN on the repo
+STEP 7: distinguishes: hypothesis=True limitations=True reviewed_facts=True
+STEP 8: challenge status=200 shown=True
+STEP 9: analyze support-engineer status=200
+STEP 9: analyze account-manager status=200
+STEP 9: roles page: relevant=True unmet_shown=True
+STEP 10: opportunity status=200 url=http://127.0.0.1:3127/jobs/1
+STEP 10: studio prepare link=True prepare_section=True
+STEP 11: correction save status=200
+STEP 11: re-reviewed=True corrected_text=True
+STEP 11: studio stale after correction=True
+STEP 11: roles stale guidance=True
+PARTB_DONE

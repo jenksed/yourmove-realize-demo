@@ -1,0 +1,43 @@
+call 1: 3.6s in=775 out=812 finish=stop backend_model=meta-models/muse-spark-open-1026
+round1/A-transferable: connections=1 | expectation: >=1 connection spanning >=2 records, limitations name missing ownership/outcomes
+  conn-1 capability="Technical triage and structured handoff to engineering" supports=3 limitations=["Records do not establish candidate implemented fixes or owned resolution after handoff" "Outcome_state unknown/not_recorded; no verified impact on resolution time or customer outcome" "Does not establish independent authority over engineering resources or depth of diagnosis beyond initial triage"] follow_up="Can you describe a specific handoff you coordinated where engineering needed no re-investigation because of how you documented the triage?"
+    interpretation: Candidate repeatedly performs initial technical diagnosis/investigation to clarify issue, then documents/communicates and transfers ownership to specialist engineering team rather than resolving directly.
+    relationship: MySQL record shows diagnosing via EXPLAIN and documenting for DBA handoff; billing integration record shows investigating logs and coordinating technical handoff to billing engineering; escalations record shows clarifying issue and coordinating developers/operations through handoff — same clarify-then-handoff pattern across three distinct domains.
+    ev1 r1 action="Diagnosed full table scan with EXPLAIN and documented findings for DBA team handoff" quote="I diagnosed a full table scan using EXPLAIN and documented my findings"
+    ev2 r1 action="Investigated integration logs and coordinated handoff to billing engineering" quote="I investigated the integration logs and coordinated a technical handoff"
+    ev3 r1 action="Clarified technical issue and coordinated handoff between developers and operations" quote="I coordinated developers and operations through handoff"
+call 2: 2.0s in=696 out=402 finish=stop backend_model=meta-models/muse-spark-open-1026
+round1/B-superficial: connections=0 | expectation: 0 connections (shared MySQL keywords only)
+call 3: 0.9s in=705 out=122 finish=stop backend_model=meta-models/muse-spark-open-1026
+round1/C-ambiguous: connections=0 | expectation: 0 connections, or limitations state personal ownership/outcomes not established
+call 4: 4.9s in=704 out=1314 finish=stop backend_model=meta-models/muse-spark-open-1026
+round1/D-coordination-not-leadership: connections=0 | expectation: any connection must limit itself to communication/coordination and must NOT claim people management or incident leadership
+call 5: 1.7s in=683 out=409 finish=stop backend_model=meta-models/muse-spark-open-1026
+round1/E-one-strong-two-weak: connections=0 | expectation: 0 connections (only one record shows diagnosis/handoff)
+call 6: 5.9s in=691 out=1481 finish=stop backend_model=meta-models/muse-spark-open-1026
+round1/F-two-record-transfer: connections=0 | expectation: >=1 connection across the 2 records (log-tracing plus documented handoff)
+call 7: 4.3s in=775 out=1083 finish=stop backend_model=meta-models/muse-spark-open-1026
+round2/A-transferable: connections=1 | expectation: >=1 connection spanning >=2 records, limitations name missing ownership/outcomes
+  conn-1 capability="Technical triage and documented handoff to specialist owners" supports=3 limitations=["Records do not establish that the candidate implemented or owned the fix after handoff" "No recorded outcomes confirming resolution, performance improvement, or customer impact" "Does not show authority over or accountability for the receiving DBA/engineering teams"] follow_up="Can you share an example where you stayed accountable for the outcome after the handoff and verified the fix worked?"
+    interpretation: Across different systems the candidate acts as an investigator/broker: diagnosing the technical symptom, documenting it, and coordinating a handoff to the team that owns the fix, rather than owning implementation.
+    relationship: Evidence 1 shows diagnosis of a DB issue (EXPLAIN/full table scan) with documentation and handoff to DBAs for implementation. Evidence 2 shows log investigation for a billing integration failure with handoff to billing engineering. Evidence 3 shows handling repeated escalations by clarifying the issue and coordinating developers and operations through handoff. The recurring action is investigate -> clarify/document -> transfer ownership.
+    ev1 r1 action="Diagnosed DB performance issue with EXPLAIN, documented findings, handed implementation to DBA team" quote="I diagnosed a full table scan using EXPLAIN and documented my findings"
+    ev2 r1 action="Investigated billing integration logs and coordinated handoff to billing engineering" quote="I investigated the integration logs and coordinated a technical handoff"
+    ev3 r1 action="Clarified escalated technical issues and coordinated handoff between developers and operations" quote="I coordinated developers and operations through handoff"
+call 8: 1.7s in=696 out=168 finish=stop backend_model=meta-models/muse-spark-open-1026
+round2/B-superficial: connections=0 | expectation: 0 connections (shared MySQL keywords only)
+call 9: 1.1s in=705 out=231 finish=stop backend_model=meta-models/muse-spark-open-1026
+round2/C-ambiguous: connections=0 | expectation: 0 connections, or limitations state personal ownership/outcomes not established
+call 10: 4.5s in=704 out=1189 finish=stop backend_model=meta-models/muse-spark-open-1026
+round2/D-coordination-not-leadership: connections=1 | expectation: any connection must limit itself to communication/coordination and must NOT claim people management or incident leadership
+  conn-1 capability="Providing operational communication and coordination support without decision authority" supports=3 limitations=["Records do not establish incident leadership, responder management, or technical decision-making responsibility" "Records do not establish ownership of vendor resolution, network fix, or change approval outcomes" "Records do not establish measured impact, audience size, or effectiveness of communications"] follow_up="Can you provide an example where you owned follow-up tracking or confirmation that stakeholders/vendors received and acted on your updates?"
+    interpretation: Across incident, vendor, and maintenance contexts, the candidate consistently performed communication facilitation (sending updates, scheduling, relaying questions, drafting notices) while explicitly not holding leadership or approval responsibility. Recurrence shows a transferable support capability, not ownership of technical decisions.
+    relationship: Actions recur in three genuinely different contexts: production incident (record 1), vendor troubleshooting call (record 2), and planned maintenance window (record 3). In each, the candidate's own action is enabling communication flow between technical owners and stakeholders, with explicit boundaries that leadership/approval stayed with others.
+    ev1 r1 action="Sent status updates to stakeholders during production incident" quote="I sent status updates to stakeholders during the incident; I did not lead the incident or manage responders"
+    ev2 r1 action="Scheduled vendor call and relayed questions between vendor and engineers" quote="I scheduled the vendor call and relayed questions between the vendor and our engineers; decisions stayed with the engineers"
+    ev3 r1 action="Drafted maintenance notice and sent reminders for change window" quote="I drafted the maintenance notice and sent reminders; I did not approve or manage the change"
+call 11: 0.9s in=683 out=145 finish=stop backend_model=meta-models/muse-spark-open-1026
+round2/E-one-strong-two-weak: connections=0 | expectation: 0 connections (only one record shows diagnosis/handoff)
+call 12: 2.6s in=691 out=590 finish=stop backend_model=meta-models/muse-spark-open-1026
+round2/F-two-record-transfer: connections=0 | expectation: >=1 connection across the 2 records (log-tracing plus documented handoff)
+SUMMARY calls=12 transport_failures=0

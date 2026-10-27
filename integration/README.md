@@ -40,6 +40,7 @@ git diff --cached --unified=0 c68051349c1d642b83c514a3377555afa9941542 -- \
   internal/app/application_answer_ai_test.go internal/app/application_handlers.go \
   internal/app/career_discovery.go internal/app/career_discovery_test.go \
   internal/app/career_roles.go internal/app/career_roles_test.go \
+  internal/app/career_connections.go internal/app/career_connections_test.go \
   internal/app/cover_letters.go internal/app/cover_letters_evidence_test.go \
   internal/app/handlers.go \
   internal/coverletter/provider/meta_discovery_test.go \
@@ -47,12 +48,13 @@ git diff --cached --unified=0 c68051349c1d642b83c514a3377555afa9941542 -- \
   internal/storage/manual_letters.go internal/storage/manual_letters_test.go \
   internal/storage/sqlite.go scripts/run-discovery-demo.py static/styles.css static/ui.js \
   templates/ai.html templates/career_discovery.html templates/career_evidence.html \
-  templates/career_roles.html templates/job.html > career-discovery/integration/yourmove.patch
+  templates/career_roles.html templates/career_studio.html templates/partials.html templates/job.html > career-discovery/integration/yourmove.patch
 ```
 
 The allowlist covers HACK-003 (evidence cover letters and storage changes), HACK-004
-(multi-experience investigation), and HACK-005 (role intelligence, answer provenance)
-on top of the HACK-001/HACK-002 base. `docs/hackathon/ROADMAP.md` stays out: planning
+(multi-experience investigation), HACK-005 (role intelligence, answer provenance), and
+HACK-006 (cross-experience synthesis, candidate challenge, Career Studio) on top of the
+HACK-001/HACK-002 base. `docs/hackathon/ROADMAP.md` stays out: planning
 metadata, not build input. Verify the regenerated patch carries no worktree-local
 entries (for example `.gstack/`) before publishing.
 

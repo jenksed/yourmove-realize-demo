@@ -1,0 +1,4 @@
+A-transferable: FAIL(validity) bad response 401 | expectation: >=1 connection spanning >=2 records, limitations name missing ownership/outcomes
+B-superficial: FAIL(validity) bad response 401 | expectation: 0 connections (shared MySQL keywords only); any connection is a quality failure to inspect manually
+C-ambiguous: FAIL(validity) bad response 401 | expectation: 0 connections, or limitations explicitly state personal ownership/outcomes are not established
+SUMMARY calls=3 transport_failures=6

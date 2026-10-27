@@ -1,0 +1,19 @@
+STEP 1: start status=200 session=1 url=http://127.0.0.1:3127/career-discovery/1
+STEP 2: leads=['lead-1', 'lead-2', 'lead-3', 'lead-4'] titles=['Linux and MySQL troubleshooting for production support incidents', 'Handling complex support escalations with developers and operations', 'Documenting incidents and handoff to engineering teams', 'Resolving customer billing and account access issues']
+STEP 3: investigate lead lead-1 -> session 1 status=200
+STEP 3:   answer 1 status=200 question=Can you walk me through one specific production support incident where you did Linux and M
+STEP 3:   proposal: MySQL Slow Query Diagnosis with Handoff for Payroll Incident
+STEP 4:   evidence draft id=1 status=200 url=http://127.0.0.1:3127/career-evidence/1
+STEP 4:   reviewed=True review_post=200 title=MySQL Slow Query Diagnosis with Handoff for Payroll Incident
+STEP 3: investigate lead lead-2 -> session 2 status=200
+STEP 3:   answer 1 status=200 question=Can you walk me through one specific complex support escalation you handled that involved 
+STEP 3:   proposal: Complex Support Escalation for Billing Invoice Download Failure
+STEP 4:   evidence draft id=2 status=200 url=http://127.0.0.1:3127/career-evidence/2
+STEP 4:   reviewed=True review_post=200 title=Complex Support Escalation for Billing Invoice Download Failure
+STEP 3: investigate lead lead-3 -> session 3 status=200
+STEP 3:   answer 1 status=200 question=Thanks for sharing your background. Focusing on your work documenting incidents and handin
+STEP 3:   answer 2 status=200 question=Thanks for that detail on that same complex escalation — focusing just on the documented h
+STEP 3:   proposal: Documented handoff and customer status coordination for complex escalation
+STEP 4:   evidence draft id=3 status=200 url=http://127.0.0.1:3127/career-evidence/3
+STEP 4:   reviewed=True review_post=200 title=Documented handoff and customer status coordination for complex escala
+EVIDENCE_IDS [1, 2, 3]

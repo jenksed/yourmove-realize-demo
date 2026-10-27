@@ -1,5 +1,5 @@
 diff --git a/.gitignore b/.gitignore
-index 6373e31..9d5989c 100644
+index 6373e31..0617c0d 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -33,0 +34,3 @@ jobs.db-shm
@@ -8,13 +8,13 @@ index 6373e31..9d5989c 100644
 +/career-discovery/
 diff --git a/career-discovery.lock b/career-discovery.lock
 new file mode 100644
-index 0000000..509cb24
+index 0000000..775afa8
 --- /dev/null
 +++ b/career-discovery.lock
 @@ -0,0 +1 @@
-+cb0cd3f2c84cca460d7b9c4133c01b2bb721f847
++b05a912ccc8fa38db6a0ea0bb4f68e44459fa50d
 diff --git a/docs/BACKLOG.md b/docs/BACKLOG.md
-index 036be81..58ab8f6 100644
+index 036be81..68db729 100644
 --- a/docs/BACKLOG.md
 +++ b/docs/BACKLOG.md
 @@ -15,0 +16,36 @@
@@ -54,7 +54,7 @@ index 036be81..58ab8f6 100644
 +- **Checks:** `TestCoverLetterEvidenceGroundsPromptAndPinsRefs`, `TestCoverLetterEvidenceRejectsUnreviewedChangedOrExtra`, `TestCoverLetterEvidenceStalenessFlagsChangedRecords`, `TestCoverLetterOutputFailureStages`, `TestCoverLetterWithoutEvidenceLeavesRefsEmpty`, `TestGenerateLetterUsesDiscoveryBudgetWithoutJSONContract`, legacy migration retention; full `go test -count=1 ./...` PASS.
 +- **Remaining:** cross-role relevance framing, answer-artifact staleness (letters only so far), application-package overview, native Wails acceptance, Standard-mode smoke.
 +
-@@ -269,0 +306,17 @@ Evidence: the local finalization review archive contains `EXECUTIVE_REVIEW.md`,
+@@ -269,0 +306,31 @@ Evidence: the local finalization review archive contains `EXECUTIVE_REVIEW.md`,
 +
 +### HACK-004 — Multi-experience investigation + investigator UI
 +
@@ -66,12 +66,26 @@ index 036be81..58ab8f6 100644
 +
 +### HACK-005 — Role intelligence, activation, correction impact (maps to roadmap P3/P4/P5, schedule Oct 30–Nov 1)
 +
-+- **Priority:** P1 · **Stage:** hackathon career discovery · **Status:** IN PROGRESS — closeout landed; per-role answer/letter activation remains.
++- **Priority:** P1 · **Stage:** hackathon career discovery · **Status:** ACTIVATION COMPLETE live (both packages grounded, saved, zero submissions).
 +- **Closeout (this run):** host commits `2dbb551` (role intelligence page) and `47d4729` (provenance flags + plan doc); engine commit `cb0cd3f` (roles, rolebench, evaluation, screenshots). Full host `go test ./...` PASS, full engine `go test ./...` PASS. Live: both Standard role analyses completed in isolated demo DB (SE 23:42:16, AM 23:42:27); `/career-roles` screenshots captured wide (1280) + narrow (375) and saved under `career-discovery/evidence/`; demo server terminated. TSE reading: MySQL record relevant with DBA-ownership gaps, billing record irrelevant; TAM reading is the substantive inverse; account-ownership and prod-DB-change requirements correctly unmet in both. Answer provenance: correction flags `needs-review` without rewriting text; edits flag `edited`; rows survive restart (test).
 +- **Worktree (uncommitted, `feat/career-discovery-b1`):** engine `career-discovery/roles.go` (`AnalyzeRole`, verbatim unmet-echo validation, irrelevant-carries-no-capabilities rule) + `roles_test.go` + `cmd/rolebench/main.go`; host `internal/app/career_roles.go` (two fixed synthetic role profiles, cached analyses in `career_role_analyses`, demo-opportunity creation), `internal/app/answer_provenance.go` (additive `ai_answer_provenance` sidecar, read-only flags, no save-path schema changes) + both tests, `templates/career_roles.html` + scoped CSS; plan doc `docs/implementation/2026-10-26-correction-impact.md`. HACK-004 "Remaining" items for cross-role relevance and answer-artifact staleness are absorbed here, not tracked twice.
 +- **Verified this run:** `go build ./...` OK; focused suites PASS (host `TestCareerRoles*` + `TestAnswerProvenance*`; engine `TestAnalyzeRole*` + `TestFindLeads*`); new files gofmt-clean (pre-existing `cover_letters.go`/`handlers.go` formatting left untouched). Full host/engine suites NOT re-run in this run. Live (prior run, isolated demo DB): both Standard-mode role analyses HTTP 200; Contributor rolebench 4/4 `finish=stop` at the shipped 3072 profile (results in worktree, uncommitted).
 +- **Submission boundary:** `career-discovery/integration/yourmove.patch` still predates HACK-004 and needs refresh with an extended allowlist (current allowlist lacks `career_roles*`, `answer_provenance*`, `career_roles.html`). Reconstruction verified this run: patch applies clean to isolated baseline `c680513` **only with the documented `--unidiff-zero` flag** (plain `git apply --check` falsely reports failure on `application_answer_ai.go`, `ui.js`, `ai.html`), baseline+patch builds, engine `go test ./...` PASS, recon host `TestDiscovery*`/`TestCoverLetterEvidence*` PASS. Scratch recon worktree and demo DB removed. `~/Projects/yourmove-go` untouched.
-+- **Next executable milestone:** land the HACK-005 slice as separate commits (engine roles+eval, host roles page, provenance+flags), refresh the integration patch, then per-role answer/letter activation against the two demo opportunities. Parallel-safe now: engine eval expansion, demo-script drafting, native-acceptance prep, patch-refresh mechanics — none share files with the pending slice. Shared handlers/templates (`app.go`, `app_http.go`, `job.html`) stay single-writer until landing.
++- **Activation (2026-10-27, synthetic candidate, real muse-spark-1.3):** two approved evidence records (billing rev 2, MySQL rev 2), facts unchanged, both role analyses live and substantively different. TSE (Percona MySQL, job 3): grounded answer (8 claims → evidence 2 rev 2, 3 unresolved, saved) + cover letter (both refs rev 2). TAM (Ashby Strategic CSM, job 10): grounded answer (8 claims → evidence 1+2 rev 2, saved) + cover letter (both refs rev 2, ownership-first framing); Percona TAM-manager letter (job 4) retained as second TAM framing. Eligible-but-ungroundable TAM questions correctly returned `insufficient`; a transient provider 502 cluster (4 consecutive, incl. known-good control) cleared after cooldown. Résumé selected, never rewritten; zero submissions; restart persistence verified twice; full host/desktop/engine suites PASS; controlled Chromium captures inspected. Native Wails NOT VERIFIED. Evidence: [activation record](implementation/2026-10-27-activation.md), `career-discovery/evidence/2026-10-27-activation-*.png`.
++- **Next executable milestone:** Nov 2 demo-script freeze and full competition demonstration (Oct 30–Nov 2 schedule). Parallel-safe now: engine eval expansion, demo-script drafting, native-acceptance prep. Shared handlers/templates (`app.go`, `app_http.go`, `job.html`) stay single-writer until landing. Greenhouse `question_<id>` vs positional-guard finding recorded for a planned fix (PagerDuty incident-management question stays manual-only).
++
++### HACK-006 — Living Career Intelligence: cross-experience synthesis, challenge, Studio
++
++- **Priority:** P1 · **Stage:** hackathon career discovery · **Status:** VERTICAL SLICE COMPLETE live via Baseten (synthetic); Meta direct NOT VERIFIED this run (401). Native Wails NOT VERIFIED.
++- **Engine (uncommitted in `career-discovery/` checkout at `b05a912` + new files):** `connections.go` (`SynthesizeConnections`, `ValidateSynthesis`: >=2 distinct records per connection, exact verbatim quote resolution against host-supplied Situation/Actions/SourceTexts, ID/revision binding, >=1 limitation required, empty result allowed) + `connections_test.go` + `cmd/connbench` (3 synthetic histories, backend-aware, max 6 calls). Host `career-discovery.lock` advanced `cb0cd3f` -> `b05a912c` (intervening commits are evidence/patch-only, no engine code change; verified by diff).
++- **Host (staged, branch `feat/hackathon-baseten-backend` at `2d5adba`):** `internal/app/career_connections.go` (`career_connections` + `career_connection_challenges` tables, `/career-studio`, `/career-connections/synthesize`, `/career-connections/{id}/challenge`, `discoveryDestination()`), `templates/career_studio.html` (Investigate -> Understand -> Challenge -> Explore roles -> Prepare), nav entry, scoped CSS. Consent copy in discovery/roles/studio templates now names the actual destination (Meta or Baseten) before authorization. Interpretations are never written into `career_evidence`; challenged interpretations stay visible, are not promoted, and correction of a supporting record (new revision) marks the synthesis/connections stale without rewriting saved answers or letters (HACK-005 provenance flags reused on the roles surface).
++- **Baseten disposition:** local branch `feat/hackathon-baseten-backend` (`2d5adba`) reconciled as-is; selector/key behavior verified, no fallback, no permanent Settings option. Real candidate data kept off Baseten; live checks used synthetic data only. Inference guidance added to `AGENTS.md`.
++- **Live inference (2026-10-27, synthetic only):** connbench via Baseten `meta-models/muse-spark-open-1026`: A-transferable 1 connection (3 supports, limitations name missing implementation ownership/outcomes, follow-up present), B-superficial 0 connections, C-ambiguous 0 connections; 3 calls, 0 transport failures (`career-discovery/evidence/2026-10-27-connbench-baseten.txt`). Meta direct (Contributor and Standard `muse-spark-1.3`): HTTP 401 on all 3 calls with the current `.env` key; NOT VERIFIED, recorded in `2026-10-27-connbench-meta401.txt`. Host live run (isolated `/tmp` workspace, Baseten): 3 seeded reviewed records -> synthesis HTTP 303, 3 connections displayed with exact quotes, challenge `unsupported` persisted and displayed, correction (rev 1->2) produced the stale banner in a controlled browser (gstack, no console errors; wide/narrow captures in `career-discovery/evidence/2026-10-27-studio-*.png`). Zero employer submissions.
++- **Tests:** engine `go test ./...` PASS, `go vet ./...` PASS; host `go test ./...` PASS and `go test -tags desktop ./...` PASS (this run). New focused tests: `TestSynthesizeConnections*` (fabricated quote, single-record, wrong revision, empty), `TestStudioSynthesisChallengeStaleAndRestart`, `TestStudioRequiresTwoReviewed`.
++- **Submission boundary:** `career-discovery/integration/yourmove.patch` regenerated with HACK-006 allowlist additions (`.gstack/` worktree line stripped, hunk fixed); verified applies clean with `--unidiff-zero` to baseline `c680513` and baseline+patch builds. `~/Projects/yourmove-go` untouched. Nothing committed or pushed this run; host changes staged for review, engine changes uncommitted in its checkout.
++- **Remaining / unproven:** Meta-direct synthesis quality (needs a valid Meta key), full Nov 2 demo script (investigate 3 experiences from 5 bullets through the real interview UI, two role analyses, application materials in one sitting), native Wails acceptance, Baseten-vs-Meta identical-input comparison beyond connbench (blocked by Meta 401).
++- **Next executable milestone:** obtain/rotate a valid Meta key, re-run connbench Meta vs Baseten on identical inputs, then run the full scripted demo (steps 1-13) in the controlled browser before Nov 2 freeze.
++- **13-step demo + expanded eval (2026-10-27, synthetic, Baseten live):** Steps 1-13 executed against the real host in an isolated workspace: 5 bullets -> 4 leads -> 3 investigated experiences (real adaptive interviews, 1-2 answers each) -> 3 reviewed evidences (ids 1-3) -> real synthesis (2 connections, 6 exact quotations displayed) -> fact/inference/limitation separation shown -> conn-1 challenged `unsupported` and persisted -> TSE + TAM analyses both saved and substantively shown with unmet requirements -> demo TSE opportunity created and Prepare/cover-letter/resume surfaces accessed (no answer generation claimed in this run) -> evidence 1 corrected and re-reviewed (revision 4) with Studio stale banner and roles refresh guidance -> server restart recovered 2 connections, challenge, stale state, and reviewed records (gstack-verified, no console errors) -> `submissions` count 0. Logs: `career-discovery/evidence/2026-10-27-demo13-*.txt`, screenshot `2026-10-27-studio-after-restart.png`. Expanded eval: connbench now covers 6 histories (A transferable, B superficial, C ambiguous, D coordination-not-leadership, E one-strong-two-weak, F two-record transfer) x 2 identical rounds = 12 Baseten comparisons, 12/12 expectations met on connection counts, D correctly limited to communication support without leadership claims in both rounds, avg latency 3.1s, 7380 input / 9386 output tokens total (`2026-10-27-connbench-baseten12.txt`). Meta-direct qualification attempted on identical 12 inputs: all HTTP 401 with current key, so Meta-vs-Baseten quality comparison remains BLOCKED on a valid Meta credential, not on code (`2026-10-27-connbench-meta12-401.txt`). Native Wails still NOT VERIFIED.
 diff --git a/docs/implementation/2026-10-26-career-discovery.md b/docs/implementation/2026-10-26-career-discovery.md
 new file mode 100644
 index 0000000..a9f5917
@@ -234,15 +248,28 @@ index 1d11b44..960b028 100644
 +require github.com/jenksed/yourmove-career-discovery v0.0.0
 +
 diff --git a/internal/app/ai_handlers.go b/internal/app/ai_handlers.go
-index 4bcfa90..9ed427a 100644
+index 4bcfa90..569ee7d 100644
 --- a/internal/app/ai_handlers.go
 +++ b/internal/app/ai_handlers.go
 @@ -18,0 +19 @@ func (a *App) aiConnectionsPage(w http.ResponseWriter, r *http.Request) {
 +		{ID: "meta", Name: "Muse Spark 1.3", Access: "Career Discovery · Standard mode", Setup: "Set MODEL_API_KEY in the launch environment and restart YourMove. For the development launcher, the key can be kept in the ignored .env file. YourMove never displays or saves the key here.", Model: "muse-spark-1.3"},
-@@ -29,0 +31,6 @@ func (a *App) aiConnectionsPage(w http.ResponseWriter, r *http.Request) {
+@@ -29,0 +31,19 @@ func (a *App) aiConnectionsPage(w http.ResponseWriter, r *http.Request) {
 +		case "meta":
-+			if _, err := coverprovider.ConfigureMeta(); err == nil {
-+				s.State, s.Detail = "ready", "Key available in this session. Access and credits are checked when you generate."
++			runner, err := coverprovider.ConfigureMeta()
++			if err == nil {
++				s.State = "ready"
++				// HACK-BASETEN: temporary display branch; delete on removal.
++				if runner.MuseBackend() == coverprovider.MuseBackendBaseten {
++					s.Name = "Muse Spark Open (Baseten)"
++					s.Model = runner.MuseModel()
++					s.Detail = "Baseten hackathon backend selected (HACKATHON_MUSE_BACKEND=baseten). Key available in this session. Access and credits are checked when you generate."
++				} else {
++					s.Detail = "Key available in this session. Access and credits are checked when you generate."
++				}
++			} else if backend, berr := coverprovider.SelectedMuseBackend(); berr == nil && backend == coverprovider.MuseBackendBaseten { // HACK-BASETEN: temporary display branch; delete on removal.
++				s.Name = "Muse Spark Open (Baseten)"
++				s.Model = coverprovider.BasetenMuseModel
++				s.State, s.Detail = "setup", "Add BASETEN_API_KEY to start a Baseten Muse interview."
 +			} else {
 +				s.State, s.Detail = "setup", "Add MODEL_API_KEY to start a Muse interview."
 +			}
@@ -462,18 +489,23 @@ index 0000000..7855b65
 +	}
 +}
 diff --git a/internal/app/app.go b/internal/app/app.go
-index 80c5924..c92e9f5 100644
+index 80c5924..22376e9 100644
 --- a/internal/app/app.go
 +++ b/internal/app/app.go
-@@ -43,0 +44,2 @@ type appResources struct {
+@@ -43,0 +44,3 @@ type appResources struct {
 +	careerDiscoveryTemplate       *template.Template
 +	careerRolesTemplate           *template.Template
-@@ -73,0 +76,2 @@ func New(config Config) (*App, error) {
++	careerStudioTemplate          *template.Template
+@@ -73,0 +77,3 @@ func New(config Config) (*App, error) {
 +		{"templates/career_discovery.html", &resources.careerDiscoveryTemplate},
 +		{"templates/career_roles.html", &resources.careerRolesTemplate},
-@@ -83,0 +88,9 @@ func New(config Config) (*App, error) {
++		{"templates/career_studio.html", &resources.careerStudioTemplate},
+@@ -83,0 +90,12 @@ func New(config Config) (*App, error) {
 +	if err := initializeDiscovery(config.DB); err != nil {
 +		return nil, fmt.Errorf("initialize Career Discovery: %w", err)
++	}
++	if err := initializeConnections(config.DB); err != nil {
++		return nil, fmt.Errorf("initialize career connections: %w", err)
 +	}
 +	if err := initializeRoleAnalyses(config.DB); err != nil {
 +		return nil, fmt.Errorf("initialize role analyses: %w", err)
@@ -482,13 +514,13 @@ index 80c5924..c92e9f5 100644
 +		return nil, fmt.Errorf("initialize answer provenance: %w", err)
 +	}
 diff --git a/internal/app/app_http.go b/internal/app/app_http.go
-index d9af0e3..b04cac9 100644
+index d9af0e3..0a530ce 100644
 --- a/internal/app/app_http.go
 +++ b/internal/app/app_http.go
 @@ -14,0 +15,2 @@ type App struct {
 +	discoveryMu               sync.Mutex                                            // one charged discovery request at a time
 +	discoveryGenerate         func(context.Context, string, string) (string, error) // test seam; production uses Meta
-@@ -52,0 +55,11 @@ func newMux(app *App) http.Handler {
+@@ -52,0 +55,14 @@ func newMux(app *App) http.Handler {
 +	mux.HandleFunc("GET /career-discovery", app.careerDiscoveryPage)
 +	mux.HandleFunc("POST /career-discovery", app.startCareerDiscovery)
 +	mux.HandleFunc("GET /career-discovery/{id}", app.careerDiscoveryPage)
@@ -497,6 +529,9 @@ index d9af0e3..b04cac9 100644
 +	mux.HandleFunc("POST /career-discovery/{id}/select", app.selectCareerLead)
 +	mux.HandleFunc("POST /career-discovery/{id}/explore", app.exploreCareerLead)
 +	mux.HandleFunc("POST /career-discovery/{id}/evidence", app.discoveryEvidenceDraft)
++	mux.HandleFunc("GET /career-studio", app.careerStudioPage)
++	mux.HandleFunc("POST /career-connections/synthesize", app.synthesizeConnections)
++	mux.HandleFunc("POST /career-connections/{id}/challenge", app.challengeConnection)
 +	mux.HandleFunc("GET /career-roles", app.careerRolesPage)
 +	mux.HandleFunc("POST /career-roles/{role}/analyze", app.analyzeCareerRole)
 +	mux.HandleFunc("POST /career-roles/{role}/opportunity", app.createRoleOpportunity)
@@ -994,12 +1029,413 @@ index ca021bf..ef2e885 100644
 +	LetterEvidence       []letterEvidenceChoice
 +	LetterEvidenceRefs   []letterEvidenceRef
 +	LetterEvidenceStale  bool
+diff --git a/internal/app/career_connections.go b/internal/app/career_connections.go
+new file mode 100644
+index 0000000..f894e16
+--- /dev/null
++++ b/internal/app/career_connections.go
+@@ -0,0 +1,289 @@
++package app
++
++import (
++	"context"
++	"database/sql"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/http"
++	"strings"
++	"time"
++
++	discovery "github.com/jenksed/yourmove-career-discovery"
++	coverprovider "github.com/jenksed/yourmove-go/internal/coverletter/provider"
++)
++
++// HACK-006: cross-experience synthesis persistence, challenge state, and the
++// Living Career Intelligence Studio. Interpretations are hypotheses; they
++// are never written into career_evidence and never auto-rewrite artifacts.
++
++func initializeConnections(db *sql.DB) error {
++	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS career_connections (
++	 id INTEGER PRIMARY KEY CHECK(id=1), evidence_hash TEXT NOT NULL DEFAULT '', synthesis TEXT NOT NULL DEFAULT '',
++	 notice TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '')`); err != nil {
++		return err
++	}
++	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS career_connection_challenges (
++	 synthesis_hash TEXT NOT NULL, connection_id TEXT NOT NULL, state TEXT NOT NULL DEFAULT '',
++	 note TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '', PRIMARY KEY(synthesis_hash, connection_id))`)
++	return err
++}
++
++// discoveryDestination names the actual inference destination before the
++// candidate authorizes a request. HACK-BASETEN: Baseten is disclosed when
++// selected; unset preserves the Meta destination.
++func discoveryDestination() string {
++	backend, err := coverprovider.SelectedMuseBackend()
++	if err == nil && backend == coverprovider.MuseBackendBaseten {
++		return "Baseten (temporary hackathon backend, meta-models/muse-spark-open-1026)"
++	}
++	return "Meta (muse-spark-1.3, standard mode)"
++}
++
++type connectionView struct {
++	discovery.Connection
++	Challenge string
++	Note      string
++	Stale     bool // a supporting record changed revision since synthesis
++}
++
++type studioPage struct {
++	Evidences   []CareerEvidence
++	Drafts      []CareerEvidence
++	Connections []connectionView
++	Synthesis   *discovery.ConnectionSynthesis
++	Hash        string
++	StoredHash  string
++	Stale       bool
++	Notice      string
++	Destination string
++	Roles       []roleAnalysisPage
++	ChallengeN  int
++}
++
++func reviewedSynthesisEvidences(a *App) ([]CareerEvidence, []discovery.ConnectionEvidence, error) {
++	reviewed, err := reviewedRoleEvidencesAll(a)
++	if err != nil {
++		return nil, nil, err
++	}
++	inputs := make([]discovery.ConnectionEvidence, 0, len(reviewed))
++	for _, e := range reviewed {
++		in := discovery.ConnectionEvidence{ID: e.ID, Revision: e.Revision, Title: e.Title, Situation: e.Situation, Actions: e.Actions, OutcomeState: e.OutcomeState}
++		if sources, err := a.careerEvidenceTraceSources(e); err == nil {
++			for _, s := range sources {
++				in.SourceTexts = append(in.SourceTexts, s.ResponseText)
++			}
++		}
++		inputs = append(inputs, in)
++	}
++	return reviewed, inputs, nil
++}
++
++// reviewedRoleEvidencesAll is reviewedRoleEvidences without the role cap:
++// synthesis accepts up to MaxConnectionEvidences records.
++func reviewedRoleEvidencesAll(a *App) ([]CareerEvidence, error) {
++	entries, err := a.careerEvidenceEntries()
++	if err != nil {
++		return nil, err
++	}
++	var out []CareerEvidence
++	for _, e := range entries {
++		if e.Status != "reviewed" || strings.TrimSpace(e.Title) == "" || strings.TrimSpace(e.Situation) == "" || strings.TrimSpace(e.Actions) == "" {
++			continue
++		}
++		out = append(out, e)
++		if len(out) >= discovery.MaxConnectionEvidences {
++			break
++		}
++	}
++	return out, nil
++}
++
++func (p studioPage) EvidenceTitle(id int64) string {
++	for _, e := range p.Evidences {
++		if e.ID == id {
++			return e.Title
++		}
++	}
++	return "Record (no longer reviewed or present)"
++}
++
++func (a *App) loadStudio() (studioPage, error) {
++	page := studioPage{Destination: discoveryDestination()}
++	entries, err := a.careerEvidenceEntries()
++	if err != nil {
++		return page, err
++	}
++	for _, e := range entries {
++		if e.Status == "reviewed" {
++			page.Evidences = append(page.Evidences, e)
++		} else {
++			page.Drafts = append(page.Drafts, e)
++		}
++	}
++	reviewed, _, err := reviewedSynthesisEvidences(a)
++	if err != nil {
++		return page, err
++	}
++	page.Hash = roleEvidenceHash(reviewed)
++	var raw, notice string
++	err = a.db.QueryRow(`SELECT evidence_hash,synthesis,notice FROM career_connections WHERE id=1`).Scan(&page.StoredHash, &raw, &notice)
++	if err == nil && raw != "" {
++		var syn discovery.ConnectionSynthesis
++		if json.Unmarshal([]byte(raw), &syn) == nil {
++			page.Synthesis = &syn
++			page.Notice = notice
++			page.Stale = page.StoredHash != page.Hash
++			current := map[int64]int64{}
++			for _, e := range reviewed {
++				current[e.ID] = e.Revision
++			}
++			challenges := map[string][2]string{}
++			rows, qerr := a.db.Query(`SELECT connection_id,state,note FROM career_connection_challenges WHERE synthesis_hash=?`, page.StoredHash)
++			if qerr == nil {
++				defer rows.Close()
++				for rows.Next() {
++					var id, state, note string
++					if rows.Scan(&id, &state, &note) == nil {
++						challenges[id] = [2]string{state, note}
++					}
++				}
++			}
++			for _, c := range syn.Connections {
++				v := connectionView{Connection: c}
++				if ch, ok := challenges[c.ID]; ok {
++					v.Challenge, v.Note = ch[0], ch[1]
++					if v.Challenge != "" {
++						page.ChallengeN++
++					}
++				}
++				for _, s := range c.Supports {
++					if rev, ok := current[s.EvidenceID]; !ok || rev != s.EvidenceRevision {
++						v.Stale = true
++					}
++				}
++				page.Connections = append(page.Connections, v)
++			}
++		}
++	} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
++		return page, err
++	}
++	// Role summaries reuse the saved HACK-005 analyses; no new inference here.
++	hash := roleEvidenceHash(mustCap(reviewed))
++	for _, role := range careerRoleProfiles() {
++		entry := roleAnalysisPage{Role: role, Hash: hash}
++		var araw, anotice string
++		if err := a.db.QueryRow(`SELECT analysis,notice FROM career_role_analyses WHERE role_key=? AND evidence_hash=?`, role.Key, hash).Scan(&araw, &anotice); err == nil && araw != "" {
++			var analysis discovery.RoleAnalysis
++			if json.Unmarshal([]byte(araw), &analysis) == nil && analysis.RoleKey == role.Key {
++				entry.Analysis = &analysis
++				entry.Notice = anotice
++			}
++		}
++		if job, err := a.roleOpportunity(role.Key); err == nil && job != nil {
++			entry.Job = job
++			entry.Flags = a.savedAnswerProvenance(*job)
++		}
++		page.Roles = append(page.Roles, entry)
++	}
++	return page, nil
++}
++
++func mustCap(e []CareerEvidence) []CareerEvidence {
++	if len(e) > discovery.MaxRoleEvidences {
++		return e[:discovery.MaxRoleEvidences]
++	}
++	return e
++}
++
++func (a *App) careerStudioPage(w http.ResponseWriter, r *http.Request) {
++	page, err := a.loadStudio()
++	if err != nil {
++		http.Error(w, "Unable to load Career Studio", 500)
++		return
++	}
++	w.Header().Set("Content-Type", "text/html; charset=utf-8")
++	w.Header().Set("Cache-Control", "private, no-store")
++	_ = a.resources.careerStudioTemplate.Execute(w, page)
++}
++
++func (a *App) runSynthesis(ctx context.Context, evidences []CareerEvidence, inputs []discovery.ConnectionEvidence) error {
++	generate, metrics, err := a.discoveryRunner()
++	var syn discovery.ConnectionSynthesis
++	if err == nil {
++		syn, err = discovery.SynthesizeConnections(ctx, generate, inputs)
++	}
++	hash := roleEvidenceHash(evidences)
++	notice := fmt.Sprintf("Muse compared %d reviewed experience(s) together. These connections are hypotheses for your judgment; nothing was approved or adopted.", len(evidences))
++	if err != nil {
++		notice = "Muse could not complete this synthesis (" + coverprovider.ErrorNotice(err) + "). No interpretation was saved."
++		if errors.Is(err, discovery.ErrInvalid) {
++			notice = "Muse output did not pass source or format checks. Nothing was saved; retry the synthesis."
++		}
++	}
++	notice += discoveryUsageNote(*metrics, true)
++	now := time.Now().UTC().Format(time.RFC3339Nano)
++	if err != nil {
++		_, dbErr := a.db.Exec(`INSERT INTO career_connections(id,evidence_hash,synthesis,notice,created_at,updated_at) VALUES(1,?,'',?,?,?) ON CONFLICT(id) DO UPDATE SET notice=excluded.notice,updated_at=excluded.updated_at`, hash, notice, now, now)
++		return dbErr
++	}
++	raw, _ := json.Marshal(syn)
++	_, dbErr := a.db.Exec(`INSERT INTO career_connections(id,evidence_hash,synthesis,notice,created_at,updated_at) VALUES(1,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET evidence_hash=excluded.evidence_hash,synthesis=excluded.synthesis,notice=excluded.notice,updated_at=excluded.updated_at`, hash, string(raw), notice, now, now)
++	return dbErr
++}
++
++func (a *App) synthesizeConnections(w http.ResponseWriter, r *http.Request) {
++	if !discoveryConsent(w, r) {
++		return
++	}
++	if !a.discoveryMu.TryLock() {
++		http.Error(w, "A Muse request is already in progress. Wait before retrying.", http.StatusConflict)
++		return
++	}
++	defer a.discoveryMu.Unlock()
++	evidences, inputs, err := reviewedSynthesisEvidences(a)
++	if err != nil || len(evidences) < 2 {
++		http.Error(w, "Review at least two Career Evidence records before looking for connections.", 422)
++		return
++	}
++	if err := a.runSynthesis(r.Context(), evidences, inputs); err != nil {
++		http.Error(w, "Unable to save synthesis", 500)
++		return
++	}
++	http.Redirect(w, r, "/career-studio#connections", http.StatusSeeOther)
++}
++
++// challengeConnection records the candidate's judgment. It never edits
++// evidence, never deletes the interpretation, and survives restart.
++func (a *App) challengeConnection(w http.ResponseWriter, r *http.Request) {
++	if !parseLocalForm(w, r, 8<<10) {
++		return
++	}
++	connID := r.PathValue("id")
++	if connID != "conn-1" && connID != "conn-2" && connID != "conn-3" {
++		http.NotFound(w, r)
++		return
++	}
++	state := r.PostForm.Get("state")
++	if state != "" && state != "questioned" && state != "unsupported" {
++		http.Error(w, "Choose a challenge state", 400)
++		return
++	}
++	note := strings.TrimSpace(r.PostForm.Get("note"))
++	if len(note) > 500 {
++		http.Error(w, "Keep the note under 500 bytes", 400)
++		return
++	}
++	var hash string
++	if err := a.db.QueryRow(`SELECT evidence_hash FROM career_connections WHERE id=1`).Scan(&hash); err != nil || hash == "" {
++		http.Error(w, "No saved synthesis to challenge", 409)
++		return
++	}
++	now := time.Now().UTC().Format(time.RFC3339Nano)
++	if _, err := a.db.Exec(`INSERT INTO career_connection_challenges(synthesis_hash,connection_id,state,note,updated_at) VALUES(?,?,?,?,?) ON CONFLICT(synthesis_hash,connection_id) DO UPDATE SET state=excluded.state,note=excluded.note,updated_at=excluded.updated_at`, hash, connID, state, note, now); err != nil {
++		http.Error(w, "Unable to save challenge", 500)
++		return
++	}
++	http.Redirect(w, r, "/career-studio#connections", http.StatusSeeOther)
++}
+diff --git a/internal/app/career_connections_test.go b/internal/app/career_connections_test.go
+new file mode 100644
+index 0000000..b627cdc
+--- /dev/null
++++ b/internal/app/career_connections_test.go
+@@ -0,0 +1,100 @@
++package app
++
++import (
++	"context"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"path/filepath"
++	"strings"
++	"testing"
++
++	"github.com/jenksed/yourmove-go/internal/storage"
++)
++
++func seedSecondReviewed(t *testing.T, a *App) {
++	t.Helper()
++	now := "2026-10-26T10:00:00Z"
++	if _, err := a.db.Exec(`INSERT INTO career_evidence(title,situation,actions,outcome_state,source_notes,source_writing,status,revision,created_at,updated_at) VALUES('Billing escalation','Customer could not access invoices after a plan change','Explained the billing cause to the customer and coordinated a technical handoff to billing engineering; did not own the account.','unknown','synthetic','synthetic','reviewed',1,?,?)`, now, now); err != nil {
++		t.Fatal(err)
++	}
++}
++
++func connGenerate(_ context.Context, _, _ string) (string, error) {
++	return `{"connections":[{"id":"conn-1","capability":"Cross-functional technical problem-solving","interpretation":"Both records show diagnosis followed by a documented handoff.","relationship":"Diagnosis plus handoff recurs across database and billing contexts.","supports":[{"evidence_id":1,"evidence_revision":2,"quote":"Checked slow query log and used EXPLAIN","action":"Diagnosed the slow query"},{"evidence_id":2,"evidence_revision":1,"quote":"coordinated a technical handoff to billing engineering","action":"Coordinated the handoff"}],"limitations":["Production change ownership stayed with other teams","Renewal ownership is not established"],"candidate_use":"I can credibly say I diagnose problems and move them across team boundaries with documented handoffs","follow_up":"Did recipients confirm your findings were acted on?"}]}`, nil
++}
++
++func TestStudioSynthesisChallengeStaleAndRestart(t *testing.T) {
++	a, dir := testWorkspace(t)
++	seedReviewedEvidence(t, a)
++	seedSecondReviewed(t, a)
++	a.discoveryGenerate = connGenerate
++	mux := newMux(a)
++
++	if got := postCareerEvidence(mux, "/career-connections/synthesize", url.Values{"consent": {"yes"}}); got.Code != 303 {
++		t.Fatal("synthesize", got.Code, got.Body.String())
++	}
++	get := func(path string) string {
++		rec := httptest.NewRecorder()
++		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "http://localhost"+path, nil))
++		if rec.Code != 200 {
++			t.Fatal(path, rec.Code, rec.Body.String()[:400])
++		}
++		return rec.Body.String()
++	}
++	body := get("/career-studio")
++	for _, want := range []string{"Cross-functional technical problem-solving", "Checked slow query log and used EXPLAIN", "What this does not establish", "AI hypothesis", "Challenge this interpretation"} {
++		if !strings.Contains(body, want) {
++			t.Fatal("studio missing", want)
++		}
++	}
++	// Challenge persists.
++	if got := postCareerEvidence(mux, "/career-connections/conn-1/challenge", url.Values{"state": {"unsupported"}, "note": {"That was mostly the DBA"}}); got.Code != 303 {
++		t.Fatal("challenge", got.Code, got.Body.String())
++	}
++	if body = get("/career-studio"); !strings.Contains(body, "marked this interpretation") || !strings.Contains(body, "unsupported") {
++		t.Fatal("challenge not shown", body[:600])
++	}
++	// Correction (new revision) marks dependent interpretation stale; evidence itself untouched by challenge.
++	if _, err := a.db.Exec(`UPDATE career_evidence SET actions='Checked slow query log; suggested an index.',revision=3 WHERE id=1`); err != nil {
++		t.Fatal(err)
++	}
++	if body = get("/career-studio"); !strings.Contains(body, "Supporting evidence changed") {
++		t.Fatal("stale state not shown after correction")
++	}
++	// Synthesis requires consent naming the actual destination.
++	if got := postCareerEvidence(mux, "/career-connections/synthesize", url.Values{}); got.Code != 400 || !strings.Contains(got.Body.String(), "Authorize sending this to Meta") {
++		t.Fatal("consent gate", got.Code, got.Body.String())
++	}
++	// Restart: synthesis + challenge survive in SQLite.
++	if err := a.db.Close(); err != nil {
++		t.Fatal(err)
++	}
++	db, err := storage.OpenDB(filepath.Join(dir, "jobs.db"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer db.Close()
++	var syn, state string
++	if err := db.QueryRow(`SELECT synthesis FROM career_connections WHERE id=1`).Scan(&syn); err != nil || !strings.Contains(syn, "Cross-functional") {
++		t.Fatal("synthesis did not survive restart", err)
++	}
++	if err := db.QueryRow(`SELECT state FROM career_connection_challenges WHERE connection_id='conn-1'`).Scan(&state); err != nil || state != "unsupported" {
++		t.Fatal("challenge did not survive restart", state, err)
++	}
++}
++
++func TestStudioRequiresTwoReviewed(t *testing.T) {
++	a, _ := testWorkspace(t)
++	seedReviewedEvidence(t, a)
++	a.discoveryGenerate = connGenerate
++	mux := newMux(a)
++	if got := postCareerEvidence(mux, "/career-connections/synthesize", url.Values{"consent": {"yes"}}); got.Code != 422 {
++		t.Fatal("expected 422 with one reviewed record", got.Code)
++	}
++	rec := httptest.NewRecorder()
++	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "http://localhost/career-studio", nil))
++	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "at least two reviewed") {
++		t.Fatal("studio gate", rec.Code)
++	}
++}
 diff --git a/internal/app/career_discovery.go b/internal/app/career_discovery.go
 new file mode 100644
-index 0000000..45e8643
+index 0000000..45eb2b0
 --- /dev/null
 +++ b/internal/app/career_discovery.go
-@@ -0,0 +1,510 @@
+@@ -0,0 +1,529 @@
 +package app
 +
 +import (
@@ -1032,6 +1468,7 @@ index 0000000..45e8643
 +	Notice                   string
 +	CanAnswer                bool
 +	Sessions                 []discoverySessionLink
++	Destination              string
 +}
 +type discoverySessionLink struct {
 +	ID        int64
@@ -1123,6 +1560,7 @@ index 0000000..45e8643
 +			return
 +		}
 +	}
++	p.Destination = discoveryDestination()
 +	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 +	w.Header().Set("Cache-Control", "private, no-store")
 +	_ = a.resources.careerDiscoveryTemplate.Execute(w, p)
@@ -1133,7 +1571,7 @@ index 0000000..45e8643
 +		return false
 +	}
 +	if len(r.PostForm["consent"]) != 1 || r.PostForm.Get("consent") != "yes" {
-+		http.Error(w, "Authorize sending this interview to Meta before continuing", 400)
++		http.Error(w, "Authorize sending this to "+discoveryDestination()+" before continuing", 400)
 +		return false
 +	}
 +	return true
@@ -1191,6 +1629,32 @@ index 0000000..45e8643
 +	return gen, metrics, nil
 +}
 +
++// discoveryUsageNote reports observed inference usage with the actual backend
++// and model identity, so diagnostics and evaluation results preserve which
++// model ran. Meta dollar estimates never apply to Baseten usage, which bills
++// the hackathon account separately.
++func discoveryUsageNote(m coverprovider.RequestMetrics, withFinish bool) string {
++	if m.PromptTokens <= 0 && m.CompletionTokens <= 0 {
++		return ""
++	}
++	// HACK-BASETEN: temporary backend branch; delete on removal.
++	if m.Backend == coverprovider.MuseBackendBaseten {
++		note := fmt.Sprintf(" Tokens: %d input / %d output via Baseten %s", m.PromptTokens, m.CompletionTokens, m.Model)
++		if withFinish {
++			note += fmt.Sprintf("; finish: %s", m.FinishReason)
++		}
++		return note + "."
++	}
++	// Standard-mode estimate, not an account charge; rates checked 2026-10-26.
++	cached := min(m.CachedTokens, m.PromptTokens)
++	cost := (float64(m.PromptTokens-cached)*1.25 + float64(cached)*0.15 + float64(m.CompletionTokens)*4.25) / 1e6
++	note := fmt.Sprintf(" Tokens: %d input / %d output; estimated inference $%.5f", m.PromptTokens, m.CompletionTokens, cost)
++	if withFinish {
++		note += fmt.Sprintf("; finish: %s", m.FinishReason)
++	}
++	return note + "."
++}
++
 +func (a *App) runLeads(ctx context.Context, p discoveryPage) error {
 +	generate, metrics, err := a.discoveryRunner()
 +	next := p.State
@@ -1208,11 +1672,7 @@ index 0000000..45e8643
 +			notice = "Muse output did not pass lead checks. Your excerpt is saved; retry below. Nothing was approved."
 +		}
 +	}
-+	if metrics.PromptTokens > 0 || metrics.CompletionTokens > 0 {
-+		cached := min(metrics.CachedTokens, metrics.PromptTokens)
-+		cost := (float64(metrics.PromptTokens-cached)*1.25 + float64(cached)*0.15 + float64(metrics.CompletionTokens)*4.25) / 1e6
-+		notice += fmt.Sprintf(" Tokens: %d input / %d output; estimated inference $%.5f.", metrics.PromptTokens, metrics.CompletionTokens, cost)
-+	}
++	notice += discoveryUsageNote(*metrics, false)
 +	raw, _ := json.Marshal(next)
 +	result, err := a.db.Exec(`UPDATE career_discovery SET state=?,notice=?,revision=revision+1 WHERE id=? AND revision=? AND evidence_id=0`, string(raw), notice, p.ID, p.Revision)
 +	if err != nil {
@@ -1422,12 +1882,7 @@ index 0000000..45e8643
 +			notice = "Muse output did not pass source or format checks. Your input is saved; retry or start a new interview. No evidence was approved."
 +		}
 +	}
-+	if metrics.PromptTokens > 0 || metrics.CompletionTokens > 0 {
-+		// Standard-mode estimate, not an account charge; rates checked 2026-10-26.
-+		cached := min(metrics.CachedTokens, metrics.PromptTokens)
-+		cost := (float64(metrics.PromptTokens-cached)*1.25 + float64(cached)*0.15 + float64(metrics.CompletionTokens)*4.25) / 1e6
-+		notice += fmt.Sprintf(" Tokens: %d input / %d output; estimated inference $%.5f; finish: %s.", metrics.PromptTokens, metrics.CompletionTokens, cost, metrics.FinishReason)
-+	}
++	notice += discoveryUsageNote(metrics, true)
 +	raw, _ := json.Marshal(next)
 +	// A late result cannot overwrite a newer candidate response or review draft.
 +	result, err := a.db.Exec(`UPDATE career_discovery SET state=?,notice=?,revision=revision+1 WHERE id=? AND revision=? AND evidence_id=0`, string(raw), notice, p.ID, p.Revision)
@@ -1687,10 +2142,10 @@ index 0000000..601cd21
 +}
 diff --git a/internal/app/career_roles.go b/internal/app/career_roles.go
 new file mode 100644
-index 0000000..2f329d9
+index 0000000..adf8359
 --- /dev/null
 +++ b/internal/app/career_roles.go
-@@ -0,0 +1,258 @@
+@@ -0,0 +1,255 @@
 +package app
 +
 +import (
@@ -1758,9 +2213,10 @@ index 0000000..2f329d9
 +}
 +
 +type careerRolesPage struct {
-+	Roles     []roleAnalysisPage
-+	Evidences []CareerEvidence
-+	Notice    string
++	Roles       []roleAnalysisPage
++	Evidences   []CareerEvidence
++	Notice      string
++	Destination string
 +}
 +
 +func (p careerRolesPage) EvidenceTitle(id int64) string {
@@ -1829,7 +2285,7 @@ index 0000000..2f329d9
 +		return
 +	}
 +	hash := roleEvidenceHash(evidences)
-+	page := careerRolesPage{Evidences: evidences}
++	page := careerRolesPage{Evidences: evidences, Destination: discoveryDestination()}
 +	for _, role := range careerRoleProfiles() {
 +		entry := roleAnalysisPage{Role: role, Hash: hash}
 +		var raw, notice string
@@ -1878,11 +2334,7 @@ index 0000000..2f329d9
 +		encoded, _ := json.Marshal(analysis)
 +		raw = string(encoded)
 +	}
-+	if metrics.PromptTokens > 0 || metrics.CompletionTokens > 0 {
-+		cached := min(metrics.CachedTokens, metrics.PromptTokens)
-+		cost := (float64(metrics.PromptTokens-cached)*1.25 + float64(cached)*0.15 + float64(metrics.CompletionTokens)*4.25) / 1e6
-+		notice += fmt.Sprintf(" Tokens: %d input / %d output; estimated inference $%.5f; finish: %s.", metrics.PromptTokens, metrics.CompletionTokens, cost, metrics.FinishReason)
-+	}
++	notice += discoveryUsageNote(*metrics, true)
 +	now := time.Now().UTC().Format(time.RFC3339Nano)
 +	if raw == "" {
 +		// Surface the failure without overwriting a prior good analysis.
@@ -2496,6 +2948,50 @@ index 0000000..15a9636
 +		t.Fatal("plain draft reported stale")
 +	}
 +}
+diff --git a/internal/app/discovery_usage_note_test.go b/internal/app/discovery_usage_note_test.go
+new file mode 100644
+index 0000000..46ba038
+--- /dev/null
++++ b/internal/app/discovery_usage_note_test.go
+@@ -0,0 +1,38 @@
++package app
++
++import (
++	"strings"
++	"testing"
++
++	coverprovider "github.com/jenksed/yourmove-go/internal/coverletter/provider"
++)
++
++func TestDiscoveryUsageNoteEmptyWithoutTokens(t *testing.T) {
++	if got := discoveryUsageNote(coverprovider.RequestMetrics{}, false); got != "" {
++		t.Fatalf("empty metrics note = %q", got)
++	}
++}
++
++func TestDiscoveryUsageNoteMetaEstimateUnchanged(t *testing.T) {
++	got := discoveryUsageNote(coverprovider.RequestMetrics{
++		PromptTokens: 400, CompletionTokens: 1400, CachedTokens: 100,
++		FinishReason: "stop", Backend: coverprovider.MuseBackendMeta, Model: "muse-spark-1.3",
++	}, true)
++	want := " Tokens: 400 input / 1400 output; estimated inference $0.00634; finish: stop."
++	if got != want {
++		t.Fatalf("meta note = %q, want %q", got, want)
++	}
++}
++
++func TestDiscoveryUsageNoteBasetenKeepsIdentityWithoutMetaPricing(t *testing.T) {
++	got := discoveryUsageNote(coverprovider.RequestMetrics{
++		PromptTokens: 400, CompletionTokens: 1400,
++		FinishReason: "stop", Backend: coverprovider.MuseBackendBaseten, Model: coverprovider.BasetenMuseModel,
++	}, true)
++	if !strings.Contains(got, "via Baseten meta-models/muse-spark-open-1026") {
++		t.Fatalf("baseten note must preserve model identity: %q", got)
++	}
++	if strings.Contains(got, "$") || strings.Contains(got, "estimated inference") {
++		t.Fatalf("baseten note must not imply Meta pricing: %q", got)
++	}
++}
 diff --git a/internal/app/handlers.go b/internal/app/handlers.go
 index dbccf2f..e091a0e 100644
 --- a/internal/app/handlers.go
@@ -2555,39 +3051,258 @@ index 0000000..7558d5c
 +		t.Fatal(text, metrics, err)
 +	}
 +}
+diff --git a/internal/coverletter/provider/muse_backend_test.go b/internal/coverletter/provider/muse_backend_test.go
+new file mode 100644
+index 0000000..119b28d
+--- /dev/null
++++ b/internal/coverletter/provider/muse_backend_test.go
+@@ -0,0 +1,152 @@
++package provider
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++)
++
++func TestMuseBackendDefaultIsMeta(t *testing.T) {
++	t.Setenv("HACKATHON_MUSE_BACKEND", "")
++	t.Setenv("MODEL_API_KEY", "synthetic-unit-key")
++	t.Setenv("BASETEN_API_KEY", "")
++	runner, err := ConfigureMeta()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if runner.MuseBackend() != MuseBackendMeta {
++		t.Fatalf("default backend = %q, want meta", runner.MuseBackend())
++	}
++	if runner.backend.URL != "https://api.meta.ai/v1/chat/completions" || runner.backend.Model != "muse-spark-1.3" {
++		t.Fatal("default Meta route changed")
++	}
++	if runner.MuseModel() != "muse-spark-1.3" {
++		t.Fatalf("default model identity = %q", runner.MuseModel())
++	}
++}
++
++func TestMuseBackendExplicitMeta(t *testing.T) {
++	t.Setenv("HACKATHON_MUSE_BACKEND", "meta")
++	t.Setenv("MODEL_API_KEY", "synthetic-unit-key")
++	t.Setenv("BASETEN_API_KEY", "")
++	runner, err := ConfigureMeta()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if runner.MuseBackend() != MuseBackendMeta || runner.backend.URL != "https://api.meta.ai/v1/chat/completions" {
++		t.Fatalf("explicit meta misconfigured: %+v", runner.backend)
++	}
++}
++
++func TestMuseBackendBasetenExactEndpointModel(t *testing.T) {
++	t.Setenv("HACKATHON_MUSE_BACKEND", "baseten")
++	t.Setenv("MODEL_API_KEY", "")
++	t.Setenv("BASETEN_API_KEY", "synthetic-baseten-key")
++	runner, err := ConfigureMeta()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if runner.MuseBackend() != MuseBackendBaseten {
++		t.Fatalf("backend = %q, want baseten", runner.MuseBackend())
++	}
++	if runner.backend.URL != "https://inference.baseten.co/v1/chat/completions" {
++		t.Fatalf("endpoint = %q", runner.backend.URL)
++	}
++	if runner.backend.Model != "meta-models/muse-spark-open-1026" || runner.MuseModel() != BasetenMuseModel {
++		t.Fatalf("model = %q, want the restricted hackathon identifier", runner.backend.Model)
++	}
++}
++
++func TestMuseBackendBasetenSelectionCaseInsensitive(t *testing.T) {
++	t.Setenv("HACKATHON_MUSE_BACKEND", "  BaseTen ")
++	t.Setenv("BASETEN_API_KEY", "synthetic-baseten-key")
++	runner, err := ConfigureMeta()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if runner.MuseBackend() != MuseBackendBaseten {
++		t.Fatalf("backend = %q, want baseten", runner.MuseBackend())
++	}
++}
++
++func TestMuseBackendBasetenMissingKeyNeverFallsBack(t *testing.T) {
++	t.Setenv("HACKATHON_MUSE_BACKEND", "baseten")
++	t.Setenv("MODEL_API_KEY", "synthetic-meta-key-present")
++	t.Setenv("BASETEN_API_KEY", "")
++	if _, err := ConfigureMeta(); !errors.Is(err, errCoverAPIKey) {
++		t.Fatalf("missing Baseten key must be an actionable key error, got %v", err)
++	}
++}
++
++func TestMuseBackendUnrecognizedValueErrors(t *testing.T) {
++	t.Setenv("HACKATHON_MUSE_BACKEND", "openai")
++	t.Setenv("MODEL_API_KEY", "synthetic-unit-key")
++	if _, err := ConfigureMeta(); !errors.Is(err, errMuseBackend) {
++		t.Fatalf("unrecognized backend must error, got %v", err)
++	}
++}
++
++func TestBasetenDiscoveryRequestAuthModelAndMetrics(t *testing.T) {
++	t.Setenv("HACKATHON_MUSE_BACKEND", "baseten")
++	t.Setenv("BASETEN_API_KEY", "synthetic-baseten-key")
++	runner, err := ConfigureMeta()
++	if err != nil {
++		t.Fatal(err)
++	}
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		if r.URL.Path != "/v1/chat/completions" {
++			t.Errorf("path = %q", r.URL.Path)
++		}
++		if r.Header.Get("Authorization") != "Bearer synthetic-baseten-key" {
++			t.Error("Baseten credential not mapped to Bearer auth")
++		}
++		var body map[string]any
++		if json.NewDecoder(r.Body).Decode(&body) != nil {
++			t.Fatal("invalid request")
++		}
++		if body["model"] != "meta-models/muse-spark-open-1026" {
++			t.Errorf("model = %v", body["model"])
++		}
++		if body["reasoning_effort"] != "low" || body["max_tokens"] != float64(3072) || body["response_format"].(map[string]any)["type"] != "json_object" {
++			t.Error("Baseten discovery request lost the bounded structured profile")
++		}
++		fmt.Fprint(w, `{"choices":[{"finish_reason":"stop","message":{"content":"{\"question\":\"What did you decide?\",\"proposal\":null}"}}],"usage":{"prompt_tokens":120,"completion_tokens":60,"prompt_tokens_details":{"cached_tokens":10}}}`)
++	}))
++	defer server.Close()
++	backend := runner.backend
++	backend.URL = server.URL + "/v1/chat/completions"
++	var metrics RequestMetrics
++	backend.observe = func(m RequestMetrics) { metrics = m }
++	text, err := runProviderProfile(context.Background(), backend, "synthetic context", "trusted discovery policy", nil, true)
++	if err != nil || text == "" {
++		t.Fatal(text, err)
++	}
++	if metrics.Backend != MuseBackendBaseten || metrics.Model != BasetenMuseModel {
++		t.Fatalf("metrics identity = %+v, want baseten model identity", metrics)
++	}
++	if metrics.PromptTokens != 120 || metrics.CompletionTokens != 60 || metrics.FinishReason != "stop" {
++		t.Fatalf("metrics = %+v", metrics)
++	}
++}
++
++func TestBasetenFailureNeverFallsBackToMeta(t *testing.T) {
++	t.Setenv("HACKATHON_MUSE_BACKEND", "baseten")
++	t.Setenv("BASETEN_API_KEY", "synthetic-baseten-key")
++	runner, err := ConfigureMeta()
++	if err != nil {
++		t.Fatal(err)
++	}
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		http.Error(w, "synthetic failure", http.StatusBadGateway)
++	}))
++	defer server.Close()
++	backend := runner.backend
++	backend.URL = server.URL + "/v1/chat/completions"
++	if _, err := runProviderProfile(context.Background(), backend, "synthetic context", "trusted discovery policy", nil, true); !errors.Is(err, errCoverUnavailable) {
++		t.Fatalf("Baseten failure must surface, got %v", err)
++	}
++}
 diff --git a/internal/coverletter/provider/providers.go b/internal/coverletter/provider/providers.go
-index 32fd12f..0eb4ae9 100644
+index 32fd12f..d3dce86 100644
 --- a/internal/coverletter/provider/providers.go
 +++ b/internal/coverletter/provider/providers.go
-@@ -8,0 +9 @@ import (
+@@ -7,0 +8 @@ import (
++	"fmt"
+@@ -8,0 +10 @@ import (
 +	"log"
-@@ -15,0 +17,2 @@ import (
+@@ -15,0 +18,2 @@ import (
 +
 +	discovery "github.com/jenksed/yourmove-career-discovery"
-@@ -26,0 +30,19 @@ type coverBackend struct {
+@@ -26,0 +31,41 @@ type coverBackend struct {
 +
 +	metaDiscovery bool
++	baseten       bool // HACK-BASETEN: temporary backend flag; delete on removal.
 +	jsonOutput     bool
 +	letterBudget   bool
 +	observe       func(RequestMetrics)
 +}
 +
++// HACK-BASETEN: temporary hackathon backend. Baseten hosts Muse Spark Open
++// behind an OpenAI-compatible endpoint; it is a different model from Meta's
++// direct Muse Spark 1.3, with its own behavior and billing. Removal restores
++// the Meta-only integration; see docs/hackathon/BASETEN_TEMPORARY_BACKEND.md.
++const (
++	// MuseBackendMeta selects Meta's direct Muse Spark endpoint.
++	MuseBackendMeta = "meta"
++	// MuseBackendBaseten selects Baseten's hosted Muse Spark Open model.
++	MuseBackendBaseten = "baseten"
++
++	basetenChatURL = "https://inference.baseten.co/v1/chat/completions"
++	// BasetenMuseModel is the exact restricted hackathon model identifier.
++	// It is not Baseten's general public model identifier.
++	BasetenMuseModel = "meta-models/muse-spark-open-1026"
++)
++
 +// RequestMetrics deliberately excludes prompts, credentials and model content.
++// Backend names the hackathon Muse backend that served the request ("meta" or
++// "baseten") and Model carries its exact model identifier, so diagnostics and
++// evaluation results preserve which model actually ran.
 +type RequestMetrics struct {
 +	PromptTokens     int    `json:"prompt_tokens"`
 +	CompletionTokens int    `json:"completion_tokens"`
 +	CachedTokens     int    `json:"cached_tokens"`
 +	FinishReason     string `json:"finish_reason"`
++	Backend          string `json:"backend"`
++	Model            string `json:"model"`
 +}
 +
 +func (r Runner) GenerateDiscovery(ctx context.Context, prompt, instructions string, observe func(RequestMetrics)) (string, error) {
 +	backend := r.backend
 +	backend.observe = observe
 +	return runProviderProfile(ctx, backend, prompt, instructions, nil, true)
-@@ -49,0 +72,13 @@ type Runner struct {
+@@ -40,0 +86 @@ var (
++	errMuseBackend       = errors.New("hackathon Muse backend is not recognized") // HACK-BASETEN: delete on removal.
+@@ -49,0 +96,48 @@ type Runner struct {
++// HACK-BASETEN: temporary selection helper; delete on removal.
++// SelectedMuseBackend reports which hackathon Muse backend serves Career
++// Discovery and related Muse workflows: "meta" by default, "baseten" when
++// HACKATHON_MUSE_BACKEND=baseten. Any other value is an actionable error;
++// callers must not silently use a backend the operator did not select.
++func SelectedMuseBackend() (string, error) {
++	raw := strings.TrimSpace(os.Getenv("HACKATHON_MUSE_BACKEND"))
++	if raw == "" || strings.EqualFold(raw, MuseBackendMeta) {
++		return MuseBackendMeta, nil
++	}
++	if strings.EqualFold(raw, MuseBackendBaseten) {
++		return MuseBackendBaseten, nil
++	}
++	return "", fmt.Errorf("HACKATHON_MUSE_BACKEND=%q is not recognized (use %q or %q): %w", raw, MuseBackendMeta, MuseBackendBaseten, errMuseBackend)
++}
++
 +// ConfigureMeta reuses the compatible transport without mutating process-wide
 +// provider settings. Discovery always uses standard mode, never Contributor.
++// HACK-BASETEN: the baseten branch below is temporary; delete it on removal
++// so this function configures Meta directly again. When
++// HACKATHON_MUSE_BACKEND=baseten, Career Discovery runs against Baseten's
++// hosted Muse Spark Open model instead of Meta's direct endpoint. A missing
++// Baseten key is an error: selection never falls back to the other account.
 +func ConfigureMeta() (Runner, error) {
++	backend, err := SelectedMuseBackend()
++	if err != nil {
++		return Runner{}, err
++	}
++	if backend == MuseBackendBaseten {
++		key := os.Getenv("BASETEN_API_KEY")
++		if strings.TrimSpace(key) == "" || strings.ContainsAny(key, "\r\n") {
++			return Runner{}, fmt.Errorf("BASETEN_API_KEY is not configured for the Baseten hackathon backend: %w", errCoverAPIKey)
++		}
++		return Runner{provider: "compatible", backend: coverBackend{
++			Provider: "compatible", Model: BasetenMuseModel,
++			URL: basetenChatURL, APIKey: key, metaDiscovery: true, baseten: true,
++		}}, nil
++	}
 +	key := os.Getenv("MODEL_API_KEY")
 +	if strings.TrimSpace(key) == "" || strings.ContainsAny(key, "\r\n") {
 +		return Runner{}, errCoverAPIKey
@@ -2598,7 +3313,7 @@ index 32fd12f..0eb4ae9 100644
 +	}}, nil
 +}
 +
-@@ -90,0 +126,20 @@ func (r Runner) GenerateNarrative(ctx context.Context, prompt, instructions stri
+@@ -90,0 +185,43 @@ func (r Runner) GenerateNarrative(ctx context.Context, prompt, instructions stri
 +// GenerateNarrativeJSON requests JSON object output from an OpenAI-compatible
 +// endpoint for narrow workflows whose callers validate structured references.
 +func (r Runner) GenerateNarrativeJSON(ctx context.Context, prompt, instructions string) (string, error) {
@@ -2619,7 +3334,30 @@ index 32fd12f..0eb4ae9 100644
 +	return r.Generate(ctx, prompt, instructions)
 +}
 +
-@@ -251,0 +307,22 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
++// HACK-BASETEN: temporary identity accessors; delete on removal.
++// MuseBackend reports which hackathon Muse backend this Runner serves:
++// "baseten" for Baseten's hosted Muse Spark Open, "meta" for Meta's direct
++// endpoint, or "" for runners configured for other providers.
++func (r Runner) MuseBackend() string {
++	if r.backend.metaDiscovery && r.backend.baseten {
++		return MuseBackendBaseten
++	}
++	if r.backend.metaDiscovery {
++		return MuseBackendMeta
++	}
++	return ""
++}
++
++// MuseModel reports the exact model identifier this Muse Runner sends.
++// It is empty for runners configured for other providers.
++func (r Runner) MuseModel() string {
++	if r.backend.metaDiscovery {
++		return r.backend.Model
++	}
++	return ""
++}
++
+@@ -251,0 +389,22 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
 +	if backend.metaDiscovery {
 +		fields := request.(map[string]any)
 +		// Proposal-bearing turns exhausted 2048 (finish=length) in live
@@ -2642,7 +3380,7 @@ index 32fd12f..0eb4ae9 100644
 +		fields["max_tokens"] = 2048
 +		fields["reasoning_effort"] = "low"
 +	}
-@@ -312,0 +390,21 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
+@@ -312,0 +472,22 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
 +	if backend.observe != nil {
 +		var metadata struct {
 +			Usage struct {
@@ -2661,14 +3399,29 @@ index 32fd12f..0eb4ae9 100644
 +			if len(metadata.Choices) > 0 {
 +				m.FinishReason = metadata.Choices[0].Reason
 +			}
++			m.Backend, m.Model = backend.museIdentity() // HACK-BASETEN: delete on removal.
 +			backend.observe(m)
 +		}
 +	}
-@@ -396,0 +495,2 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
+@@ -396,0 +578,2 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
 +			// Metadata only: envelope shape and byte counts, never content.
 +			log.Printf("compatible provider output: provider=%s envelope=unusable bytes=%d", backend.Provider, len(limited))
-@@ -404,0 +505 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
+@@ -404,0 +588 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
 +			log.Printf("compatible provider output: provider=%s finish=%s bytes=%d text_bytes=%d", backend.Provider, reason, len(limited), len(result.Choices[0].Message.Content))
+@@ -421,0 +606,13 @@ func runProviderProfile(ctx context.Context, backend coverBackend, prompt, instr
++// HACK-BASETEN: temporary identity helper; delete on removal.
++// museIdentity names the hackathon Muse backend and exact model for observed
++// requests. It is empty for runners configured for other providers.
++func (b coverBackend) museIdentity() (string, string) {
++	if !b.metaDiscovery {
++		return "", ""
++	}
++	if b.baseten {
++		return MuseBackendBaseten, b.Model
++	}
++	return MuseBackendMeta, b.Model
++}
++
 diff --git a/internal/coverletter/provider/providers_test.go b/internal/coverletter/provider/providers_test.go
 index 3274d4c..8addb3e 100644
 --- a/internal/coverletter/provider/providers_test.go
@@ -2832,7 +3585,7 @@ index 0000000..93a0836
 +os.environ["YOURMOVE_COMPAT_API_KEY"] = os.environ["MODEL_API_KEY"]
 +os.execvp(sys.argv[1], [sys.argv[1]])
 diff --git a/static/styles.css b/static/styles.css
-index fbcef55..d1eab3f 100644
+index fbcef55..7949975 100644
 --- a/static/styles.css
 +++ b/static/styles.css
 @@ -1042,0 +1043,8 @@ a.progress-metric:hover span {text-decoration:underline;color:var(--color-primar
@@ -2857,7 +3610,7 @@ index fbcef55..d1eab3f 100644
 +.ai-service-group>summary {cursor:pointer;font-weight:600;line-height:1.6}
 +.ai-service-group>summary span {display:block;margin-left:18px;font-size:13px;font-weight:400;color:var(--color-muted)}
 +
-@@ -1340,0 +1361,30 @@ form[data-dirty="true"] [data-answer-status] {color:var(--color-dirty);font-weig
+@@ -1340,0 +1361,42 @@ form[data-dirty="true"] [data-answer-status] {color:var(--color-dirty);font-weig
 +
 +/* Career Discovery investigator */
 +.investigator{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;align-items:start;max-width:1180px}
@@ -2888,6 +3641,18 @@ index fbcef55..d1eab3f 100644
 +.role-column .story-card{margin:0 0 14px}
 +.investigator-tag{font-size:13px;font-weight:650;color:var(--color-muted)}
 +.role-evidence-note{max-width:780px}
++
++/* HACK-006 Living Career Intelligence Studio */
++.studio-journey{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 28px;font-size:14px}
++.studio-journey a{font-weight:650}
++.studio-section{max-width:1180px;margin:0 0 36px}
++.studio-section>p,.studio-connection p{max-width:780px}
++.studio-stories{display:grid;gap:4px}
++.studio-kind{font-size:12px;font-weight:650;vertical-align:middle;border:1px solid var(--color-border);border-radius:999px;padding:2px 10px}
++.studio-kind-hypothesis{color:var(--color-muted)}
++.studio-alert{border:1px solid var(--color-border);border-radius:8px;padding:10px 14px;background:var(--color-primary-soft);max-width:780px}
++.studio-challenge fieldset{display:grid;gap:8px;max-width:780px}
++.studio-challenge label{display:flex;gap:8px;align-items:center}
 diff --git a/static/ui.js b/static/ui.js
 index a24d006..2399a66 100644
 --- a/static/ui.js
@@ -2973,7 +3738,7 @@ index 3f860a8..507dcd7 100644
 +</article>
 diff --git a/templates/career_discovery.html b/templates/career_discovery.html
 new file mode 100644
-index 0000000..581f42b
+index 0000000..2aadc42
 --- /dev/null
 +++ b/templates/career_discovery.html
 @@ -0,0 +1,65 @@
@@ -2990,12 +3755,12 @@ index 0000000..581f42b
 +    <section aria-labelledby="story-ready"><h2 id="story-ready">Your evidence draft is ready for review</h2><p class="small-muted">Read it as a story. Correct anything that does not sound like you, then approve it in Career Evidence.</p><p><a class="button button-primary" href="/career-evidence/{{.EvidenceID}}">Review saved evidence</a></p></section>
 +  {{else if .NeedsLeads}}
 +    <section aria-labelledby="leads-retry"><h2 id="leads-retry">Your excerpt is saved</h2><p class="small-muted">Muse has not identified investigation leads yet. Retry sends only the saved excerpt.</p>
-+      <form method="POST" action="/career-discovery/{{.ID}}/leads"><input type="hidden" name="revision" value="{{.Revision}}"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send the saved résumé excerpt to Meta to identify investigation leads (muse-spark-1.3, standard mode).</span></label><button class="button button-primary" type="submit">Find investigation leads</button></form></section>
++      <form method="POST" action="/career-discovery/{{.ID}}/leads"><input type="hidden" name="revision" value="{{.Revision}}"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send the saved résumé excerpt to {{.Destination}} to identify investigation leads.</span></label><button class="button button-primary" type="submit">Find investigation leads</button></form></section>
 +  {{else if .LeadPicker}}
 +    <section aria-labelledby="leads-title"><h2 id="leads-title">Where should we investigate?</h2><p class="small-muted">Muse read your excerpt and sees these threads. Each “why” is a hypothesis to test, not a fact about you. Pick one; you can return for the others.</p>
 +      <div class="lead-list">{{range .State.Leads}}
 +        <article class="lead-card"><h3>{{.Title}}</h3><p>{{.Why}}</p>
-+          <form method="POST" action="/career-discovery/{{$.ID}}/select"><input type="hidden" name="revision" value="{{$.Revision}}"><input type="hidden" name="lead_id" value="{{.ID}}"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send my excerpt and this choice to Meta to begin this investigation (muse-spark-1.3, standard mode).</span></label><button class="button button-primary" type="submit">Investigate this</button></form>
++          <form method="POST" action="/career-discovery/{{$.ID}}/select"><input type="hidden" name="revision" value="{{$.Revision}}"><input type="hidden" name="lead_id" value="{{.ID}}"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send my excerpt and this choice to {{$.Destination}} to begin this investigation.</span></label><button class="button button-primary" type="submit">Investigate this</button></form>
 +        </article>{{end}}</div></section>
 +  {{else}}
 +    {{if .State.SelectedLead}}<p class="investigator-focus">Investigating: <strong>{{.State.SelectedLead.Title}}</strong></p>{{end}}
@@ -3007,10 +3772,10 @@ index 0000000..581f42b
 +    {{if .CanAnswer}}<section class="question-card" aria-labelledby="current-question"><p class="story-kicker">Muse asks · one question at a time</p><h2 id="current-question" class="question-text">{{.State.Question}}</h2>
 +      <form method="POST" action="/career-discovery/{{.ID}}/next" class="career-evidence-form"><input type="hidden" name="revision" value="{{.Revision}}">
 +        <div class="field"><label for="discovery-answer">Your response, in your own words</label><textarea id="discovery-answer" name="answer" rows="6" maxlength="2000" required></textarea><small>Specifics help: what you personally did, how you decided, who else was involved, and what you do not know.</small></div>
-+        <label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send this response, the résumé excerpt, and earlier interview responses to Meta for this request (muse-spark-1.3, standard mode).</span></label>
++        <label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send this response, the résumé excerpt, and earlier interview responses to {{.Destination}} for this request.</span></label>
 +        <button class="button button-primary" type="submit">Answer and continue</button>
 +      </form></section>
-+    {{else if not .State.Question}}<form method="POST" action="/career-discovery/{{.ID}}/next"><input type="hidden" name="revision" value="{{.Revision}}"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send the saved interview to Meta for another request.</span></label><button class="button button-secondary" type="submit">Retry Muse request</button></form>
++    {{else if not .State.Question}}<form method="POST" action="/career-discovery/{{.ID}}/next"><input type="hidden" name="revision" value="{{.Revision}}"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send the saved interview to {{.Destination}} for another request.</span></label><button class="button button-secondary" type="submit">Retry Muse request</button></form>
 +    {{else}}<p>This investigation reached its six-response limit. Review the proposed story above, or explore another lead from the panel.</p>{{end}}
 +  {{end}}
 +  </div>
@@ -3024,7 +3789,7 @@ index 0000000..581f42b
 +      {{else}}<p class="small-muted">Outcomes and responsibilities stay unknown until you establish them. Muse will not invent them.</p>{{end}}
 +    </section>
 +    {{if .State.Leads}}<section><h2>Investigation leads</h2><ul class="aside-leads">{{range .State.Leads}}<li>{{if eq .ID $.State.SelectedLeadID}}<strong>{{.Title}}</strong> · investigating{{else}}{{.Title}}{{end}}</li>{{end}}</ul>
-+      {{if or .EvidenceID (not .LeadPicker)}}<p class="small-muted">Explore another lead in a fresh investigation. This one stays saved.</p>{{range .State.Leads}}{{if ne .ID $.State.SelectedLeadID}}<form method="POST" action="/career-discovery/{{$.ID}}/explore" class="explore-form"><input type="hidden" name="revision" value="{{$.Revision}}"><input type="hidden" name="lead_id" value="{{.ID}}"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send my excerpt to Meta to investigate “{{.Title}}” (muse-spark-1.3, standard mode).</span></label><button class="button button-secondary" type="submit">Explore: {{.Title}}</button></form>{{end}}{{end}}{{end}}
++      {{if or .EvidenceID (not .LeadPicker)}}<p class="small-muted">Explore another lead in a fresh investigation. This one stays saved.</p>{{range .State.Leads}}{{if ne .ID $.State.SelectedLeadID}}<form method="POST" action="/career-discovery/{{$.ID}}/explore" class="explore-form"><input type="hidden" name="revision" value="{{$.Revision}}"><input type="hidden" name="lead_id" value="{{.ID}}"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send my excerpt to {{$.Destination}} to investigate “{{.Title}}” .</span></label><button class="button button-secondary" type="submit">Explore: {{.Title}}</button></form>{{end}}{{end}}{{end}}
 +    </section>{{end}}
 +    <details class="career-evidence-source"><summary>Source record · résumé and statements</summary><h3>Résumé excerpt you provided</h3><pre class="evidence-text">{{.State.Resume.Text}}</pre>{{range .State.Responses}}<h3>Muse asked</h3><p>{{.Question}}</p><p class="small-muted">Candidate self-report · {{.Source.ID}}</p><pre class="evidence-text">{{.Source.Text}}</pre>{{end}}</details>
 +    <p><a href="/career-discovery">All investigations / start another</a></p>
@@ -3035,7 +3800,7 @@ index 0000000..581f42b
 +<div class="investigator-start">
 +  <form method="POST" action="/career-discovery" class="career-evidence-form">
 +    <div class="field"><label for="discovery-resume">Your résumé bullets</label><textarea id="discovery-resume" name="resume" rows="8" maxlength="8000" placeholder="• Provided Linux and database troubleshooting support.&#10;• Helped customers resolve account and access issues." required></textarea><small>Paste a few ordinary bullets. Muse will identify which experiences are worth investigating. Use synthetic information for public demonstrations.</small></div>
-+    <label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send this excerpt to Meta to identify investigation leads with muse-spark-1.3 (standard mode). Your interview is saved locally. AI proposals require my review before they represent my experience.</span></label>
++    <label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send this excerpt to {{.Destination}} to identify investigation leads. Your interview is saved locally. AI proposals require my review before they represent my experience.</span></label>
 +    <button class="button button-primary" type="submit">Find my investigation leads</button>
 +  </form>
 +  {{if .Sessions}}<h2>Saved investigations</h2><ul>{{range .Sessions}}<li><a href="/career-discovery/{{.ID}}">Investigation {{.ID}}</a> · <time datetime="{{.CreatedAt}}">{{humanDate .CreatedAt}}</time></li>{{end}}</ul>{{end}}
@@ -3051,7 +3816,7 @@ index 991090b..29f503e 100644
 +
 diff --git a/templates/career_roles.html b/templates/career_roles.html
 new file mode 100644
-index 0000000..0447bd4
+index 0000000..68293e6
 --- /dev/null
 +++ b/templates/career_roles.html
 @@ -0,0 +1,51 @@
@@ -3090,7 +3855,7 @@ index 0000000..0447bd4
 +    {{else}}
 +      <p class="small-muted">No comparison saved for this evidence set yet.</p>
 +    {{end}}
-+    <form method="POST" action="/career-roles/{{.Role.Key}}/analyze"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send {{len $.Evidences}} reviewed record(s) and this role profile to Meta for one comparison (muse-spark-1.3, standard mode).</span></label><button class="button button-primary" type="submit">{{if .Analysis}}Re-run comparison{{else}}Compare this role{{end}}</button></form>
++    <form method="POST" action="/career-roles/{{.Role.Key}}/analyze"><label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send {{len $.Evidences}} reviewed record(s) and this role profile to {{$.Destination}} for one comparison.</span></label><button class="button button-primary" type="submit">{{if .Analysis}}Re-run comparison{{else}}Compare this role{{end}}</button></form>
 +    {{if .Job}}
 +      <h3>Application materials</h3>
 +      <p><a class="button button-secondary" href="/jobs/{{.Job.ID}}#prepare">Open opportunity: {{.Job.Title}}</a></p>
@@ -3105,6 +3870,115 @@ index 0000000..0447bd4
 +  {{end}}
 +</div>
 +{{end}}
++{{template "shell-close" .}}</body></html>
+diff --git a/templates/career_studio.html b/templates/career_studio.html
+new file mode 100644
+index 0000000..7d72a3f
+--- /dev/null
++++ b/templates/career_studio.html
+@@ -0,0 +1,103 @@
++<!doctype html>
++<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Career Studio · YourMove</title><link rel="stylesheet" href="/static/styles.css"><script defer src="/static/ui.js"></script></head><body>
++{{template "shell-open" "career-studio"}}
++<div class="page-heading"><div><h1>Your career, understood as a whole</h1><p class="page-description">What you have established, what YourMove is beginning to understand across your experiences, and where you can challenge it. You remain the authority over your history.</p></div></div>
++<nav class="studio-journey" aria-label="Career journey">
++  <a href="/career-discovery">1 · Investigate</a><span aria-hidden="true">→</span>
++  <a href="#understand">2 · Understand</a><span aria-hidden="true">→</span>
++  <a href="#connections">3 · Challenge</a><span aria-hidden="true">→</span>
++  <a href="#roles">4 · Explore roles</a><span aria-hidden="true">→</span>
++  <a href="#prepare">5 · Prepare applications</a>
++</nav>
++
++<section id="understand" class="studio-section">
++  <h2>What you have established</h2>
++  {{if .Evidences}}
++  <p>These are your reviewed experiences — records you confirmed represent you. AI interpretations below never change them.</p>
++  <div class="studio-stories">
++  {{range .Evidences}}
++    <article class="story-card">
++      <h3><a href="/career-evidence/{{.ID}}">{{.Title}}</a></h3>
++      <p class="small-muted">Reviewed · revision {{.Revision}}{{if .Period}} · {{.Period}}{{end}} · outcome: {{.OutcomeState}}</p>
++      <p><strong>Situation.</strong> {{.Situation}}</p>
++      <p><strong>Your actions.</strong> {{.Actions}}</p>
++      {{if eq .OutcomeState "recorded"}}<p><strong>Outcome.</strong> {{.Outcome}}</p>{{else}}<p class="small-muted">Outcome not established — treated as unknown, not guessed.</p>{{end}}
++      <p><a href="/career-evidence/{{.ID}}">Inspect or correct this record</a></p>
++    </article>
++  {{end}}
++  </div>
++  {{else}}
++  <p>No reviewed experiences yet. Investigate an experience and review what Muse proposes — nothing counts as established until you review it.</p>
++  <p><a class="button button-primary" href="/career-discovery">Investigate an experience</a> <a class="button button-secondary" href="/career-evidence">Open Career Evidence</a></p>
++  {{end}}
++  {{if .Drafts}}<p class="small-muted">{{len .Drafts}} draft record(s) not yet reviewed — they are excluded from every interpretation below. <a href="/career-evidence">Review drafts</a></p>{{end}}
++</section>
++
++<section id="connections" class="studio-section">
++  <h2>Connected capabilities <span class="studio-kind studio-kind-hypothesis">AI hypothesis — not approved fact</span></h2>
++  {{if .Notice}}<p class="local-save-confirmation" role="status">{{.Notice}}</p>{{end}}
++  {{if lt (len .Evidences) 2}}
++  <p class="small-muted">Connections need at least two reviewed experiences. Review another record to look across your history.</p>
++  {{else}}
++  {{if .Stale}}<p class="studio-alert" role="alert">Supporting evidence changed since this synthesis. The interpretation below may depend on superseded evidence — re-run the synthesis before relying on it. Saved answers and letters were not rewritten.</p>{{end}}
++  {{if .Synthesis}}
++    {{if not .Connections}}<p>Muse found no defensible connection across these records. Shared keywords alone are not a connection, so nothing was invented.</p>{{end}}
++    {{range .Connections}}
++    <article class="story-card studio-connection">
++      <h3>{{.Capability}}</h3>
++      <p>{{.Interpretation}}</p>
++      <p><strong>How these experiences connect.</strong> {{.Relationship}}</p>
++      {{if .Stale}}<p class="studio-alert" role="alert">A supporting record has changed since this was written. Treat this as needing review.</p>{{end}}
++      {{if eq .Challenge "unsupported"}}<p class="studio-alert" role="alert">You marked this interpretation <strong>unsupported</strong>. It stays visible for audit, is not treated as established, and should not be used in application materials.</p>
++      {{else if eq .Challenge "questioned"}}<p class="studio-alert">You marked this interpretation <strong>questionable</strong>. It remains a hypothesis under challenge{{if .Note}} — your note: “{{.Note}}”{{end}}.</p>{{end}}
++      <h4>What supports this — your actual actions</h4>
++      <ul>{{range .Supports}}<li><a href="/career-evidence/{{.EvidenceID}}">{{$.EvidenceTitle .EvidenceID}}</a> (revision {{.EvidenceRevision}}): {{.Action}}<br><q>{{.Quote}}</q> <span class="small-muted">— exact recorded statement, source-linked</span></li>{{end}}</ul>
++      {{if .CandidateUse}}<p><strong>How you can use this:</strong> {{.CandidateUse}}</p>{{end}}
++      <h4>What this does not establish</h4>
++      <ul>{{range .Limitations}}<li>{{.}}</li>{{end}}</ul>
++      {{if .FollowUp}}<p><strong>A question that could strengthen or disprove this:</strong> {{.FollowUp}} <a href="/career-discovery">Investigate it</a></p>{{end}}
++      <form method="POST" action="/career-connections/{{.ID}}/challenge" class="studio-challenge">
++        <fieldset><legend>Challenge this interpretation</legend>
++          <label><input type="radio" name="state" value="questioned" {{if eq .Challenge "questioned"}}checked{{end}}> Questionable — I am not convinced</label>
++          <label><input type="radio" name="state" value="unsupported" {{if eq .Challenge "unsupported"}}checked{{end}}> Unsupported — this does not represent me</label>
++          <label><input type="radio" name="state" value="" {{if eq .Challenge ""}}checked{{end}}> No challenge</label>
++          <label>Note (optional) <input type="text" name="note" value="{{.Note}}" maxlength="500"></label>
++          <button class="button button-secondary" type="submit">Save my challenge</button>
++        </fieldset>
++      </form>
++      <p class="small-muted">Fact vs inference: the quotations above are your reviewed statements. The capability name, interpretation, and relationship are Muse's hypothesis. Challenging never edits your evidence; correcting a record is done on its own page and will mark this interpretation for review.</p>
++    </article>
++    {{end}}
++  {{else}}
++  <p class="small-muted">No cross-experience synthesis saved yet. Muse will examine {{len .Evidences}} reviewed record(s) together and must quote your exact statements for every connection it proposes.</p>
++  {{end}}
++  <form method="POST" action="/career-connections/synthesize">
++    <label class="confirm-row"><input type="checkbox" name="consent" value="yes" required><span>Send {{len .Evidences}} reviewed record(s) to {{.Destination}} to look for connections across my experiences. Interpretations remain hypotheses until I judge them.</span></label>
++    <button class="button button-primary" type="submit">{{if .Synthesis}}Re-run synthesis{{else}}Look for connections{{end}}</button>
++  </form>
++  {{end}}
++</section>
++
++<section id="roles" class="studio-section">
++  <h2>Explore career directions</h2>
++  <p>The same approved history, read against different requirements. No fit percentages; explanations and gaps only.</p>
++  {{range .Roles}}
++  <article class="story-card">
++    <h3>{{.Role.Title}}</h3>
++    <p>{{.Role.Focus}}</p>
++    {{if .Analysis}}<ul>{{range .Analysis.Items}}{{if .Relevant}}<li><strong>{{$.EvidenceTitle .EvidenceID}}</strong> — {{.Explanation}}</li>{{end}}{{end}}{{range .Analysis.Unmet}}<li>{{.}} — no approved experience supports this yet.</li>{{end}}</ul>
++    {{else}}<p class="small-muted">No comparison saved for the current evidence set.</p>{{end}}
++    <p><a class="button button-secondary" href="/career-roles">Compare roles in detail</a>
++    {{if .Job}} <a class="button button-secondary" href="/jobs/{{.Job.ID}}#prepare">Open opportunity: {{.Job.Title}}</a>{{end}}</p>
++    {{if .Flags}}<h4>Saved materials and their evidence basis</h4><ul>{{range .Flags}}<li><strong>{{.Label}}</strong> — {{.State}}: {{.Detail}}</li>{{end}}</ul>{{end}}
++  </article>
++  {{end}}
++</section>
++
++<section id="prepare" class="studio-section">
++  <h2>Prepare applications</h2>
++  <p>Evidence-grounded résumé selection, answers, and cover letters live on each opportunity. Drafts stay drafts; nothing is submitted to an employer from YourMove.</p>
++  <p><a class="button button-primary" href="/jobs">Open opportunities</a> <a class="button button-secondary" href="/career-roles">Create a demo TSE or TAM opportunity</a></p>
++  {{if .ChallengeN}}<p class="small-muted">You have {{.ChallengeN}} challenged interpretation(s). Challenged hypotheses are not approved evidence and are excluded from what counts as established above.</p>{{end}}
++</section>
 +{{template "shell-close" .}}</body></html>
 diff --git a/templates/job.html b/templates/job.html
 index 1447702..35a0d83 100644
@@ -3121,3 +3995,9 @@ index 1447702..35a0d83 100644
 +        <ol data-answer-ai-trace-claims></ol>
 +        <div data-answer-ai-trace-unresolved hidden><h5>Not established by this evidence</h5><ul data-answer-ai-trace-unknowns></ul></div>
 +      </details>
+diff --git a/templates/partials.html b/templates/partials.html
+index f5f78f6..120f9cc 100644
+--- a/templates/partials.html
++++ b/templates/partials.html
+@@ -18,0 +19 @@
++      <a class="nav-item {{if eq . "career-studio"}}is-active{{end}}" {{if eq . "career-studio"}}aria-current="page"{{end}} href="/career-studio"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="8" r="2.5"/><circle cx="10" cy="18" r="2.5"/><path d="M8 7l7.5.7M7 8.5l2 7M16.5 10l-4.5 5.5"/></svg>Career Studio</a>

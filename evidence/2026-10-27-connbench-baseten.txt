@@ -1,0 +1,13 @@
+call 1: 4.2s in=681 out=934 finish=stop backend_model=meta-models/muse-spark-open-1026
+A-transferable: connections=1 | expectation: >=1 connection spanning >=2 records, limitations name missing ownership/outcomes
+  conn-1 capability="Technical issue triage and coordinated handoff" supports=3 limitations=["Records do not establish that candidate implemented or owned the final fix or resolution" "Records do not establish independent verification of outcomes or performance improvements" "Records do not establish decision-making authority beyond triage and coordination role"] follow_up="Can you describe a case where you owned implementation and measured post-fix outcome without a handoff?"
+    interpretation: Candidate repeatedly performs initial technical investigation to clarify issues and then coordinates a handoff to specialist teams rather than implementing fixes directly. Pattern shows diagnostic and liaison capability in support/escalation contexts.
+    relationship: All three records show the same action sequence in genuinely different contexts: payroll system slowdown (MySQL diagnosis), billing integration failure (invoice downloads), and recurring complex escalations. In each, the candidate investigates/logs the technical issue and hands off to DBA, billing engineering, or developers/operations for resolution.
+    ev1 r1 action="Diagnosed full table scan with EXPLAIN and documented findings for DBA handoff" quote="I diagnosed a full table scan using EXPLAIN and documented my findings"
+    ev2 r1 action="Investigated integration logs and coordinated handoff to billing engineering" quote="I investigated the integration logs and coordinated a technical handoff"
+    ev3 r1 action="Clarified technical issue and coordinated developers and operations via handoff" quote="I coordinated developers and operations through handoff"
+call 2: 1.5s in=602 out=311 finish=stop backend_model=meta-models/muse-spark-open-1026
+B-superficial: connections=0 | expectation: 0 connections (shared MySQL keywords only); any connection is a quality failure to inspect manually
+call 3: 0.9s in=611 out=134 finish=stop backend_model=meta-models/muse-spark-open-1026
+C-ambiguous: connections=0 | expectation: 0 connections, or limitations explicitly state personal ownership/outcomes are not established
+SUMMARY calls=3 transport_failures=0

@@ -1,0 +1,13 @@
+round1/A-transferable: FAIL(validity) bad response 401 | expectation: >=1 connection spanning >=2 records, limitations name missing ownership/outcomes
+round1/B-superficial: FAIL(validity) bad response 401 | expectation: 0 connections (shared MySQL keywords only)
+round1/C-ambiguous: FAIL(validity) bad response 401 | expectation: 0 connections, or limitations state personal ownership/outcomes not established
+round1/D-coordination-not-leadership: FAIL(validity) bad response 401 | expectation: any connection must limit itself to communication/coordination and must NOT claim people management or incident leadership
+round1/E-one-strong-two-weak: FAIL(validity) bad response 401 | expectation: 0 connections (only one record shows diagnosis/handoff)
+round1/F-two-record-transfer: FAIL(validity) bad response 401 | expectation: >=1 connection across the 2 records (log-tracing plus documented handoff)
+round2/A-transferable: FAIL(validity) bad response 401 | expectation: >=1 connection spanning >=2 records, limitations name missing ownership/outcomes
+round2/B-superficial: FAIL(validity) bad response 401 | expectation: 0 connections (shared MySQL keywords only)
+round2/C-ambiguous: FAIL(validity) bad response 401 | expectation: 0 connections, or limitations state personal ownership/outcomes not established
+round2/D-coordination-not-leadership: FAIL(validity) bad response 401 | expectation: any connection must limit itself to communication/coordination and must NOT claim people management or incident leadership
+round2/E-one-strong-two-weak: FAIL(validity) bad response 401 | expectation: 0 connections (only one record shows diagnosis/handoff)
+round2/F-two-record-transfer: FAIL(validity) bad response 401 | expectation: >=1 connection across the 2 records (log-tracing plus documented handoff)
+SUMMARY calls=12 transport_failures=24
