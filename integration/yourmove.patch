@@ -1,5 +1,5 @@
 diff --git a/.gitignore b/.gitignore
-index 6373e31..0617c0d 100644
+index 6373e31..9d5989c 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -33,0 +34,3 @@ jobs.db-shm
@@ -8,13 +8,13 @@ index 6373e31..0617c0d 100644
 +/career-discovery/
 diff --git a/career-discovery.lock b/career-discovery.lock
 new file mode 100644
-index 0000000..775afa8
+index 0000000..8d4ca09
 --- /dev/null
 +++ b/career-discovery.lock
 @@ -0,0 +1 @@
-+b05a912ccc8fa38db6a0ea0bb4f68e44459fa50d
++1d5da24215b61999a2bb918da73de8e1f39a0c54
 diff --git a/docs/BACKLOG.md b/docs/BACKLOG.md
-index 036be81..68db729 100644
+index 036be81..2cd2bb9 100644
 --- a/docs/BACKLOG.md
 +++ b/docs/BACKLOG.md
 @@ -15,0 +16,36 @@
@@ -54,7 +54,7 @@ index 036be81..68db729 100644
 +- **Checks:** `TestCoverLetterEvidenceGroundsPromptAndPinsRefs`, `TestCoverLetterEvidenceRejectsUnreviewedChangedOrExtra`, `TestCoverLetterEvidenceStalenessFlagsChangedRecords`, `TestCoverLetterOutputFailureStages`, `TestCoverLetterWithoutEvidenceLeavesRefsEmpty`, `TestGenerateLetterUsesDiscoveryBudgetWithoutJSONContract`, legacy migration retention; full `go test -count=1 ./...` PASS.
 +- **Remaining:** cross-role relevance framing, answer-artifact staleness (letters only so far), application-package overview, native Wails acceptance, Standard-mode smoke.
 +
-@@ -269,0 +306,31 @@ Evidence: the local finalization review archive contains `EXECUTIVE_REVIEW.md`,
+@@ -269,0 +306,32 @@ Evidence: the local finalization review archive contains `EXECUTIVE_REVIEW.md`,
 +
 +### HACK-004 — Multi-experience investigation + investigator UI
 +
@@ -86,6 +86,7 @@ index 036be81..68db729 100644
 +- **Remaining / unproven:** Meta-direct synthesis quality (needs a valid Meta key), full Nov 2 demo script (investigate 3 experiences from 5 bullets through the real interview UI, two role analyses, application materials in one sitting), native Wails acceptance, Baseten-vs-Meta identical-input comparison beyond connbench (blocked by Meta 401).
 +- **Next executable milestone:** obtain/rotate a valid Meta key, re-run connbench Meta vs Baseten on identical inputs, then run the full scripted demo (steps 1-13) in the controlled browser before Nov 2 freeze.
 +- **13-step demo + expanded eval (2026-10-27, synthetic, Baseten live):** Steps 1-13 executed against the real host in an isolated workspace: 5 bullets -> 4 leads -> 3 investigated experiences (real adaptive interviews, 1-2 answers each) -> 3 reviewed evidences (ids 1-3) -> real synthesis (2 connections, 6 exact quotations displayed) -> fact/inference/limitation separation shown -> conn-1 challenged `unsupported` and persisted -> TSE + TAM analyses both saved and substantively shown with unmet requirements -> demo TSE opportunity created and Prepare/cover-letter/resume surfaces accessed (no answer generation claimed in this run) -> evidence 1 corrected and re-reviewed (revision 4) with Studio stale banner and roles refresh guidance -> server restart recovered 2 connections, challenge, stale state, and reviewed records (gstack-verified, no console errors) -> `submissions` count 0. Logs: `career-discovery/evidence/2026-10-27-demo13-*.txt`, screenshot `2026-10-27-studio-after-restart.png`. Expanded eval: connbench now covers 6 histories (A transferable, B superficial, C ambiguous, D coordination-not-leadership, E one-strong-two-weak, F two-record transfer) x 2 identical rounds = 12 Baseten comparisons, 12/12 expectations met on connection counts, D correctly limited to communication support without leadership claims in both rounds, avg latency 3.1s, 7380 input / 9386 output tokens total (`2026-10-27-connbench-baseten12.txt`). Meta-direct qualification attempted on identical 12 inputs: all HTTP 401 with current key, so Meta-vs-Baseten quality comparison remains BLOCKED on a valid Meta credential, not on code (`2026-10-27-connbench-meta12-401.txt`). Native Wails still NOT VERIFIED.
++- **Critical product assessment (2026-10-27):** The demonstrated connections are defensible and evidence-specific in their actions/quotations, but their headline capabilities largely restate the original bullets (troubleshoot, document, hand off); the non-obvious value is the boundary pattern (diagnose-and-liaise without implementation/management ownership) and the TSE/TAM relevance inversion on identical records. Improvement made this run: every connection must now state `candidate_use` (what the candidate can credibly say that one record alone would not support), the policy deprioritizes single-record restatements and generic labels, and the Studio displays it as "How you can use this". Live Baseten re-check after the change: A still yields 1 connection in both rounds, with a sharper follow-up; no new weak connections appeared in B/C/E. Remaining intelligence gap: connection novelty is still bounded by how much the interviews themselves surface; deeper follow-ups on validation/feedback loops are the highest-leverage prompt investment before freeze, ahead of more UI.
 diff --git a/docs/implementation/2026-10-26-career-discovery.md b/docs/implementation/2026-10-26-career-discovery.md
 new file mode 100644
 index 0000000..a9f5917
