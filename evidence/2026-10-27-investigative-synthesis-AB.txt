@@ -1,0 +1,72 @@
+HACK-006 follow-on: does the new evidence change the insight?
+Baseten backend (synthetic data only), 2026-10-27.
+
+SET A (baseline-equivalent evidence: diagnosis + handoff, outcome unknown,
+no confirmation — connbench historyA record 1 plus two unchanged records):
+- capability: "Technical triage with documented handoff to engineering"
+- interpretation: first-level investigation/documentation, then handoff.
+- candidate_use: "I have been the person who investigates, clarifies, and
+  documents a technical issue so engineering can act."
+- limitations admit the gap: no evidence of DBA/engineering approval, no
+  evidence to judge effectiveness.
+- its own follow_up asks for exactly what is missing: "whether engineering
+  acted on it as written."
+
+SET B (record 1 enriched ONLY with the revised-Q2 discovery: DBA confirmed
+the evidence complete, acted that night without re-diagnosis, candidate
+verified normal payroll window next morning, no timings; outcome stays
+unknown; records 2-3 identical):
+- capability: "Investigating technical logs and packaging evidence for
+  engineering handoff"
+- interpretation adds the causal mechanism A could not support: the handoff
+  lets specialists "act without redoing diagnosis," grounded in the new
+  verbatim quote ("so they would not have to redo the diagnosis" + DBA
+  confirmation).
+- candidate_use: "I repeatedly cut engineering triage time by doing the
+  log-level diagnosis up front and packaging complete evidence for handoff."
+  The "cut triage time" phrasing is hypothesis language, correctly fenced by
+  its limitation ("No quantified outcomes"); the defensible core is the
+  confirmed-complete handoff.
+- ownership/outcomes still bounded: no production fix authority, no metrics.
+
+LIVE HOST PATH (real application: start -> leads -> select -> 3 answers ->
+draft -> explicit review -> explore 2 more leads -> review -> synthesize ->
+Studio, then process restart):
+- Live Q2/Q3/Q4 under the revised policy asked about confirmation,
+  verification, and why those checks first — no Linux-command detour.
+- Drafts are taken from the latest proposal, so the richest detail
+  (response-2 confirmation) initially fell out of the MySQL draft. The
+  candidate corrected record 1 at review with response-2-established wording
+  (same interview transcript, source-linked responses) and re-reviewed:
+  legitimate correction path, no invented content.
+- Post-correction Studio candidate_use: "I can explain that in both internal
+  and customer-facing incidents I can do the initial diagnosis from logs and
+  make the handoff complete enough that specialists don't have to redo it,
+  even when I don't own the fix." Limitations precisely scoped ("Validation
+  of fix was indirect ... without exact timings"). Follow-up now asks for the
+  billing-side confirmation — the correct next investigative step.
+- Pre-correction Studio insight was the same family but ungrounded (its
+  "without redoing diagnosis" had no reviewed anchor). The new evidence
+  moved the insight from hypothesized to partially substantiated.
+- Verified after full process restart: 2 reviewed records (one revision 3),
+  synthesis, challenge controls, unknown outcomes, and consent naming Baseten
+  all intact. No storage, Studio, or synthesis code changed; no employer
+  submission exists anywhere on this path.
+
+Three-way distinction:
+1. Repeats the resume: Set A ("investigates, clarifies, documents, hands
+   off") — recombines bullets into generic triage/communication labels.
+2. Supported by new detail: Set B / corrected Studio — "handoff complete
+   enough that specialists don't redo the diagnosis," resting on the
+   response-2 quote the old policy never elicited.
+3. Newly communicable: "My diagnostic write-ups were confirmed complete by
+   the receiving engineers, who acted on them as written — though I never
+   owned the fix or measured the outcome." Neither the five bullets nor the
+   baseline interview could substantiate the middle clause.
+
+Verdict: genuinely more useful, not merely recombined. Small and bounded:
+one prompt paragraph, one wording-guard test, no cap or schema changes.
+Known next gaps (not this slice): Q4 repeated an answered thread; the
+candidate_use "cut triage time" wording wants a quantity it cannot have;
+confirmation currently reaches reviewed evidence only via candidate
+correction when the interview continues past the richest proposal.

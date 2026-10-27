@@ -1,0 +1,48 @@
+HACK-006 follow-on: adaptive-questioning slice, Baseten backend
+(synthetic data only), 2026-10-27. Backend model
+meta-models/muse-spark-open-1026 in both runs.
+
+Identical resume (benchmarks/synthetic-resume.txt, five bullets) and
+identical first answer. Only the interview Policy changed (one paragraph in
+discovery.go: prefer judgment, usefulness, responsibility boundary, and
+confirmation/follow-through over further technical specifics; respect an
+explicit boundary or unknown).
+
+A1 (both runs): "During a payroll slowdown I checked the MySQL slow query
+log and used EXPLAIN on the report query. It showed a full table scan. I
+wrote up what I found in the ticket and handed it to the DBA team, since I
+could not change production indexes myself. I do not know what they changed
+or how much it improved."
+
+BASELINE Q2 (old policy): "For that same payroll slowdown, what if any
+Linux-level checks did you personally run to rule out OS or resource issues
+— what specific commands or tools did you use and what did they show before
+you focused on the MySQL query?"
+Result: dead end. Honest answer: no Linux checks were run; one of six
+interview turns spent on adjacent technical trivia the resume happened to
+mention, while the stated unknown (what the DBA did, whether it worked) and
+the handoff itself went uninvestigated.
+
+REVISED Q2 (new policy): "Staying with that same payroll slowdown, you
+concluded it was a full table scan and handed the ticket to the DBAs — what
+made you confident that write-up was enough for them to act on, and did you
+receive any later confirmation or feedback confirming your diagnosis was
+useful?"
+Result: uncovered consequential information absent from the resume and from
+A1. A2: the candidate included the slow log excerpt, EXPLAIN output, and
+affected query so the DBA would not redo the diagnosis; a DBA replied in
+the ticket that the evidence was complete and added an index that night; the
+candidate verified next morning the payroll report finished in its normal
+window, with no exact timings. No invented metrics, no claimed ownership of
+the fix, explicit boundary kept.
+
+Revised Q3 stayed on the human arc (did involvement end, or document /
+communicate / prevent a repeat). The candidate closed the loop honestly
+(ticket update, payroll contact notified, no wider prevention doc — felt DBA
+owned). Revised Q4 partly repeated the ticket-content question already
+answered in A2; minor drift, no pressure for metrics, still within the
+six-response cap. Recorded as observed behavior, not hidden.
+
+The revised Q2 proposal cites response-2 with an exact verbatim quote, keeps
+metrics and the DBA-side change in unresolved, and names no ownership beyond
+what the candidate stated. Validation passed (exact source_id/quote binding).

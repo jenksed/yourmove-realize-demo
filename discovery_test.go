@@ -52,6 +52,22 @@ func TestRejectInventedSourcesAndMalformedProposals(t *testing.T) {
 	}
 }
 
+func TestInvestigativeFollowupPrefersJudgmentOverTechnicalDetail(t *testing.T) {
+	for _, want := range []string{
+		"distinguish diagnosis from implementation",
+		"why they chose that approach",
+		"how they knew their diagnosis or recommendation was useful",
+		"what happened where their responsibility ended",
+		"confirmation, feedback, or follow-through",
+		"Respect an explicit boundary or unknown",
+		"over further technical specifics",
+	} {
+		if !strings.Contains(Policy, want) {
+			t.Fatalf("interview policy lost investigative direction %q", want)
+		}
+	}
+}
+
 func TestInputBudgetsAndResponseLimit(t *testing.T) {
 	if _, err := New(strings.Repeat("x", 8001)); err == nil {
 		t.Fatal("oversized resume accepted")
