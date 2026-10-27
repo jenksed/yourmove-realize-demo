@@ -32,16 +32,28 @@ To refresh the patch after host integration edits, first stage only the intended
 ```sh
 git diff --cached --unified=0 c68051349c1d642b83c514a3377555afa9941542 -- \
   .gitignore career-discovery.lock docs/BACKLOG.md \
-  docs/implementation/2026-10-26-career-discovery.md go.mod \
+  docs/implementation/2026-10-26-career-discovery.md \
+  docs/implementation/2026-10-26-correction-impact.md go.mod \
   internal/app/ai_handlers.go internal/app/app.go internal/app/app_http.go \
+  internal/app/answer_provenance.go internal/app/answer_provenance_test.go \
   internal/app/application_answer_ai.go internal/app/application_answer_ai_state.go \
-  internal/app/application_answer_ai_test.go internal/app/career_discovery.go \
-  internal/app/career_discovery_test.go \
+  internal/app/application_answer_ai_test.go internal/app/application_handlers.go \
+  internal/app/career_discovery.go internal/app/career_discovery_test.go \
+  internal/app/career_roles.go internal/app/career_roles_test.go \
+  internal/app/cover_letters.go internal/app/cover_letters_evidence_test.go \
+  internal/app/handlers.go \
   internal/coverletter/provider/meta_discovery_test.go \
   internal/coverletter/provider/providers.go internal/coverletter/provider/providers_test.go \
-  scripts/run-discovery-demo.py static/styles.css static/ui.js \
+  internal/storage/manual_letters.go internal/storage/manual_letters_test.go \
+  internal/storage/sqlite.go scripts/run-discovery-demo.py static/styles.css static/ui.js \
   templates/ai.html templates/career_discovery.html templates/career_evidence.html \
-  templates/job.html > career-discovery/integration/yourmove.patch
+  templates/career_roles.html templates/job.html > career-discovery/integration/yourmove.patch
 ```
+
+The allowlist covers HACK-003 (evidence cover letters and storage changes), HACK-004
+(multi-experience investigation), and HACK-005 (role intelligence, answer provenance)
+on top of the HACK-001/HACK-002 base. `docs/hackathon/ROADMAP.md` stays out: planning
+metadata, not build input. Verify the regenerated patch carries no worktree-local
+entries (for example `.gstack/`) before publishing.
 
 Check for deleted/context lines before publishing. Do not export the original app, its Git history, `.env`, local databases, unrelated backlog, or old source snapshots. Commit the generated patch in the engine repository; never edit it as a second implementation. Host application adapters remain authoritative in the host. The package remains authoritative in this repository.
