@@ -16,6 +16,8 @@ BASETEN_BASE_URL=https://inference.baseten.co/v1
 
 Existing environment variables take precedence over `.env`. The model and base URL are optional. Keep the key private; `.env` is ignored by Git. The application uses Baseten's chat completions endpoint with Meta Muse Spark Open; it never falls back to another provider or model. A Baseten key must have access to the configured model. Requests are not retried automatically.
 
+The hackathon Baseten account used by the companion project has access to the restricted model `meta-models/muse-spark-open-1026`. If the default model returns HTTP 403 with that account, explicitly set `BASETEN_MODEL=meta-models/muse-spark-open-1026` in `.env` and restart. The application will use exactly the configured model; it does not switch models automatically. The discovery request uses JSON output, low reasoning effort and a 3,072-token cap, matching the companion project's working Baseten profile.
+
 ```sh
 go test -count=1 ./...
 go run ./cmd/realize-demo

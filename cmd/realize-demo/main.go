@@ -94,7 +94,7 @@ func generate(ctx context.Context, prompt, policy string) (string, error) {
 	if key == "" {
 		return "", errors.New("Baseten is not configured. Add BASETEN_API_KEY to .env and restart.")
 	}
-	body, _ := json.Marshal(map[string]any{"model": env("BASETEN_MODEL", "meta-models/muse-spark-open"), "max_tokens": 2048, "messages": []map[string]string{{"role": "system", "content": policy}, {"role": "user", "content": prompt}}})
+	body, _ := json.Marshal(map[string]any{"model": env("BASETEN_MODEL", "meta-models/muse-spark-open"), "max_tokens": 3072, "reasoning_effort": "low", "response_format": map[string]string{"type": "json_object"}, "messages": []map[string]string{{"role": "system", "content": policy}, {"role": "user", "content": prompt}}})
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 	req, e := http.NewRequestWithContext(ctx, "POST", strings.TrimRight(env("BASETEN_BASE_URL", "https://inference.baseten.co/v1"), "/")+"/chat/completions", bytes.NewReader(body))

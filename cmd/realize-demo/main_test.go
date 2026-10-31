@@ -98,6 +98,13 @@ func TestBasetenRequest(t *testing.T) {
 	if e != nil || got != "{}" || body["model"] != "test-model" {
 		t.Fatal("bad transport", e)
 	}
+	if body["max_tokens"] != float64(3072) || body["reasoning_effort"] != "low" {
+		t.Fatal("incorrect discovery generation profile")
+	}
+	format, ok := body["response_format"].(map[string]any)
+	if !ok || format["type"] != "json_object" {
+		t.Fatal("missing JSON output profile")
+	}
 	if bytes.Contains([]byte(got), []byte("test-key")) {
 		t.Fatal("key leaked")
 	}
