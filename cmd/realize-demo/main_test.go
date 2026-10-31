@@ -75,8 +75,13 @@ func TestReviewAndFailedInference(t *testing.T) {
 	w := httptest.NewRecorder()
 	s.serve(w, r)
 	var got evidence
-	if json.Unmarshal(w.Body.Bytes(), &got) != nil || got.Quote != "diagnosed the issue" || got.SourceText != source {
+	if json.Unmarshal(w.Body.Bytes(), &got) != nil || got.Quote != "diagnosed the issue" || got.SourceText != source || got.OriginalProposal == nil || got.OriginalProposal.Title != "Diagnosis" || len(got.ReviewChanges) != 1 || got.ReviewChanges[0].After.Title != "Corrected title" {
 		t.Fatal("bad export")
+	}
+	post("/edit", url.Values{"id": {"1"}})
+	post("/keep", url.Values{"title": {"Corrected title"}, "experience": {"Investigated and handed off"}, "claim": {"Diagnostic work refined"}})
+	if v.Saved.OriginalProposal == nil || v.Saved.OriginalProposal.Title != "Diagnosis" || len(v.Saved.ReviewChanges) != 2 || v.Saved.ReviewChanges[1].Before.Claim != "Diagnostic work" || v.Saved.ReviewChanges[1].After.Claim != "Diagnostic work refined" || v.Saved.Responses[0].Source.Text != source {
+		t.Fatal("re-edit lost provenance or changed source")
 	}
 }
 func TestBasetenRequest(t *testing.T) {
@@ -153,5 +158,147 @@ func TestPastedIntakeAndMultipleDiscoveries(t *testing.T) {
 	post("/keep", url.Values{"title": {"Corrected"}, "experience": {"I investigated a login problem."}, "claim": {"I investigated a login problem."}})
 	if v.Synthesis != nil || v.Discoveries[0].Revision != 2 || len(v.Discoveries) != 2 {
 		t.Fatal("edit did not invalidate synthesis")
+	}
+}
+
+func TestChallengeWithdrawsAndCorrectionRevises(t *testing.T) {
+	st, _ := discovery.New("Worked on incidents and onboarding.")
+	st.Question = "What did you do?"
+	st, _ = discovery.RecordAnswer(st, "I investigated and handed the issue to engineering.")
+	p := discovery.Proposal{Title: "Incident", Experience: "Investigated", Claim: "Investigation", SourceID: "response-1", Quote: "I investigated"}
+	st.Proposal = &p
+	v := &session{Stage: "connections", State: st, Discoveries: []evidence{{Proposal: p, ID: 1, Revision: 1, OriginalMaterial: st.Resume.Text, Responses: st.Responses}}, Synthesis: &discovery.ConnectionSynthesis{Connections: []discovery.Connection{{ID: "conn-1", Capability: "Leadership", Interpretation: "Led the resolution"}}}}
+	s := &server{sessions: map[string]*session{"test": v}}
+	post := func(path string, values url.Values) {
+		r := httptest.NewRequest("POST", path, strings.NewReader(values.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.AddCookie(&http.Cookie{Name: "realize_session", Value: "test"})
+		s.serve(httptest.NewRecorder(), r)
+	}
+	post("/challenge", url.Values{"connection_id": {"conn-1"}, "challenge": {"I did not lead resolution"}})
+	if len(v.Synthesis.Connections) != 0 || v.Challenge == "" || v.PreviousInterpretation == "" {
+		t.Fatal("challenge failed to withdraw")
+	}
+	post("/edit", url.Values{"id": {"1"}})
+	post("/keep", url.Values{"title": {"Incident"}, "experience": {"Investigated and handed off"}, "claim": {"Investigation"}, "correction": {"Engineering resolved it; I did not."}})
+	if v.Discoveries[0].Revision != 2 || v.Synthesis != nil || len(v.Discoveries[0].Responses) != 2 || v.Discoveries[0].Responses[0].Source.Text != st.Responses[0].Source.Text {
+		t.Fatal("correction lost sources or failed to invalidate")
+	}
+}
+
+func TestFragmentAnswerPreservesRecordedResponseOnInferenceFailure(t *testing.T) {
+	st, err := discovery.New("I helped customers investigate recurring login problems.")
+	if err != nil {
+		t.Fatal(err)
+	}
+	st.Question = "What did you do?"
+	v := &session{Stage: "conversation", State: st}
+	s := &server{sessions: map[string]*session{"test": v}, generate: func(context.Context, string, string) (string, error) { return "", errors.New("inference unavailable") }}
+	r := httptest.NewRequest("POST", "/answer", strings.NewReader(url.Values{"answer": {"I gathered examples and shared them with engineering."}}.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	r.Header.Set("X-Realize-Fragment", "1")
+	r.AddCookie(&http.Cookie{Name: "realize_session", Value: "test"})
+	w := httptest.NewRecorder()
+	s.serve(w, r)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "I gathered examples and shared them with engineering.") || !strings.Contains(w.Body.String(), "inference unavailable") || !strings.Contains(w.Body.String(), `action="/retry"`) {
+		t.Fatalf("fragment did not preserve answer and retry: %d", w.Code)
+	}
+	if len(v.State.Responses) != 1 || v.State.Question != "" {
+		t.Fatal("answer was not recorded exactly once")
+	}
+}
+
+func TestWorkstreamCPresentation(t *testing.T) {
+	mkProposal := func() discovery.Proposal {
+		return discovery.Proposal{Title: "Diagnosis", Experience: "I investigated the outage and handed findings to engineering.", Claim: "Careful diagnostic work under pressure.", SourceID: "response-1", Quote: "I diagnosed the issue", Supports: []discovery.ProposalSupport{{SourceID: "response-2", Quote: "I handed my findings to engineering"}}, Unresolved: []string{"Outcome unknown"}}
+	}
+	mkState := func(p discovery.Proposal) discovery.State {
+		st, _ := discovery.New("A useful resume excerpt about troubleshooting.")
+		st.Question = "What did you do?"
+		st, _ = discovery.RecordAnswer(st, "I diagnosed the issue and kept notes.")
+		st.Question = "What happened next?"
+		st, _ = discovery.RecordAnswer(st, "I handed my findings to engineering for the fix.")
+		st.Proposal = &p
+		return st
+	}
+	render := func(v *session) string {
+		var buf bytes.Buffer
+		if e := page.Execute(&buf, v); e != nil {
+			t.Fatal(e)
+		}
+		return buf.String()
+	}
+	p := mkProposal()
+	st := mkState(p)
+	got := render(&session{Stage: "reveal", State: st})
+	for _, want := range []string{"02 / THE ACTIONS REALIZE SEES", "03 / WHAT THIS MAY DEMONSTRATE", "Why Realize thinks so", "What remains open", "01 / YOUR WORDS", "AI interpretation · awaiting your review. A matching quotation does not prove this conclusion.", "response-2", "supporting this interpretation"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("reveal missing %q", want)
+		}
+	}
+	got = render(&session{Stage: "review", State: st})
+	for _, want := range []string{"where your responsibility ended", "cited source", "Exact cited passage"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("review missing %q", want)
+		}
+	}
+	if !strings.Contains(got, "Your original statements stay unchanged.") {
+		t.Fatal("review must duplicate edits notice above Keep button")
+	}
+	item := evidence{Proposal: p, OriginalMaterial: st.Resume.Text, SourceText: st.Responses[0].Source.Text, ReviewStatus: "candidate_reviewed", ID: 1, Revision: 1, Responses: st.Responses}
+	got = render(&session{Stage: "saved", State: st, Discoveries: []evidence{item}})
+	for _, want := range []string{"Exact cited passage", "response-1", "cited source", "Supporting statements", "response-2"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("saved missing %q", want)
+		}
+	}
+	open := render(&session{Stage: "takeaway", State: st, Discoveries: []evidence{item}, Synthesis: &discovery.ConnectionSynthesis{Connections: []discovery.Connection{{ID: "conn-1", Capability: "Judgment", Interpretation: "Steady triage", Relationship: "Across both", CandidateUse: "Steady triage", Limitations: []string{"Outcome unknown"}, FollowUp: "What would you revisit next time?"}}}})
+	for _, want := range []string{"Open questions remain", "cited passage supporting this claim", "A question to consider: What would you revisit next time?", "Next actions", "Download JSON", "Back to discoveries"} {
+		if !strings.Contains(open, want) {
+			t.Fatalf("takeaway (open) missing %q", want)
+		}
+	}
+	closed := p
+	closed.Unresolved = nil
+	closedItem := evidence{Proposal: closed, OriginalMaterial: st.Resume.Text, SourceText: "x", ID: 1, Revision: 1, Responses: st.Responses}
+	got = render(&session{Stage: "takeaway", State: st, Discoveries: []evidence{closedItem}})
+	if !strings.Contains(got, "No open questions identified") {
+		t.Fatal("takeaway (resolved) missing Ready to consider")
+	}
+	if !strings.Contains(pageHTML, "44px") || !strings.Contains(pageHTML, "overflow-wrap:anywhere") || !strings.Contains(pageHTML, "700px") {
+		t.Fatal("missing presentation CSS guards")
+	}
+}
+
+func TestExperimentCookieIsolation(t *testing.T) {
+	t.Setenv("REALIZE_COOKIE_NAME", "realize_astra_session")
+	s := &server{sessions: map[string]*session{"baseline": {Stage: "saved"}}}
+	r := httptest.NewRequest("GET", "/", nil)
+	r.AddCookie(&http.Cookie{Name: "realize_session", Value: "baseline"})
+	w := httptest.NewRecorder()
+	first := s.get(w, r)
+	if first.Stage != "welcome" {
+		t.Fatal("experiment reused baseline cookie")
+	}
+	cookies := w.Result().Cookies()
+	if len(cookies) != 1 || cookies[0].Name != "realize_astra_session" {
+		t.Fatal("missing isolated cookie")
+	}
+	again := httptest.NewRequest("GET", "/", nil)
+	again.AddCookie(cookies[0])
+	if s.get(httptest.NewRecorder(), again) != first {
+		t.Fatal("experiment session did not survive refresh")
+	}
+}
+
+func TestQuoteExcerptPreservesPrefix(t *testing.T) {
+	short := "My work matters."
+	if quoteExcerpt(short) != short {
+		t.Fatal("short quote changed")
+	}
+	long := strings.Repeat("évidence ", 30)
+	got := quoteExcerpt(long)
+	if len([]rune(got)) > 160 || !strings.HasPrefix(long, got) {
+		t.Fatal("excerpt must be an exact bounded prefix")
 	}
 }

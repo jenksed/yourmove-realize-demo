@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
@@ -27,13 +28,21 @@ import (
 
 const maxUpload = 10 << 20
 
+type reviewChange struct {
+	Before discovery.Proposal `json:"before"`
+	After  discovery.Proposal `json:"after"`
+}
+
 type evidence struct {
 	discovery.Proposal
-	SourceText   string               `json:"source_text"`
-	ReviewStatus string               `json:"review_status"`
-	ID           int64                `json:"id"`
-	Revision     int64                `json:"revision"`
-	Responses    []discovery.Response `json:"responses"`
+	OriginalProposal *discovery.Proposal  `json:"original_proposal,omitempty"`
+	ReviewChanges    []reviewChange       `json:"review_changes,omitempty"`
+	OriginalMaterial string               `json:"original_material"`
+	SourceText       string               `json:"source_text"`
+	ReviewStatus     string               `json:"review_status"`
+	ID               int64                `json:"id"`
+	Revision         int64                `json:"revision"`
+	Responses        []discovery.Response `json:"responses"`
 }
 type session struct {
 	mu                                sync.Mutex
@@ -47,6 +56,7 @@ type session struct {
 	InputKind                         string
 	OriginalLeads                     []discovery.Lead
 	Challenge                         string
+	PreviousInterpretation            string
 }
 type server struct {
 	mu       sync.Mutex
@@ -57,7 +67,7 @@ type server struct {
 func (s *server) get(w http.ResponseWriter, r *http.Request) *session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if c, e := r.Cookie("realize_session"); e == nil {
+	if c, e := r.Cookie(env("REALIZE_COOKIE_NAME", "realize_session")); e == nil {
 		if v := s.sessions[c.Value]; v != nil {
 			return v
 		}
@@ -69,7 +79,7 @@ func (s *server) get(w http.ResponseWriter, r *http.Request) *session {
 	id := hex.EncodeToString(b)
 	v := &session{Stage: "welcome"}
 	s.sessions[id] = v
-	http.SetCookie(w, &http.Cookie{Name: "realize_session", Value: id, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, Secure: r.TLS != nil})
+	http.SetCookie(w, &http.Cookie{Name: env("REALIZE_COOKIE_NAME", "realize_session"), Value: id, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode, Secure: r.TLS != nil})
 	return v
 }
 func loadEnv(path string) {
@@ -358,6 +368,12 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 		case "/keep":
 			if v.Stage == "review" && v.State.ValidateProposal() == nil {
 				p := *v.State.Proposal
+				correction := strings.TrimSpace(r.FormValue("correction"))
+				if len(correction) > 2000 {
+					v.Notice = "Please keep your correction under 2,000 bytes."
+					break
+				}
+
 				title := strings.TrimSpace(r.FormValue("title"))
 				experience := strings.TrimSpace(r.FormValue("experience"))
 				claim := strings.TrimSpace(r.FormValue("claim"))
@@ -365,6 +381,10 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 					v.Notice = "Please complete each field within its length limit."
 					break
 				}
+				if correction != "" {
+					v.State.Responses = append(v.State.Responses, discovery.Response{Question: "Candidate correction during review", Source: discovery.Source{ID: fmt.Sprintf("response-%d", len(v.State.Responses)+1), Kind: "self_report", Text: correction}})
+				}
+				before := p
 				p.Title = title
 				p.Experience = experience
 				p.Claim = claim
@@ -374,10 +394,20 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 						source = a.Source.Text
 					}
 				}
-				item := evidence{Proposal: p, SourceText: source, ReviewStatus: "candidate_reviewed", Responses: append([]discovery.Response(nil), v.State.Responses...)}
+				item := evidence{Proposal: p, OriginalMaterial: v.State.Resume.Text, SourceText: source, ReviewStatus: "candidate_reviewed", Responses: append([]discovery.Response(nil), v.State.Responses...)}
+				original := before
+				item.OriginalProposal = &original
+				if before.Title != p.Title || before.Experience != p.Experience || before.Claim != p.Claim {
+					item.ReviewChanges = append(item.ReviewChanges, reviewChange{Before: before, After: p})
+				}
 				if v.Editing != 0 {
 					for i := range v.Discoveries {
 						if v.Discoveries[i].ID == v.Editing {
+							previous := v.Discoveries[i]
+							if previous.OriginalProposal != nil {
+								item.OriginalProposal = previous.OriginalProposal
+							}
+							item.ReviewChanges = append(append([]reviewChange(nil), previous.ReviewChanges...), item.ReviewChanges...)
 							item.ID = v.Editing
 							item.Revision = v.Discoveries[i].Revision + 1
 							v.Discoveries[i] = item
@@ -393,9 +423,16 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				v.Saved = &item
+				wasEditing := v.Editing != 0
 				v.Editing = 0
 				v.Synthesis = nil
 				v.Challenge = ""
+				v.PreviousInterpretation = ""
+				if wasEditing {
+					v.Notice = "Your reviewed correction replaced the previous discovery. Related connections were withdrawn; you can reconsider them."
+				} else {
+					v.Notice = "Discovery saved to your portrait."
+				}
 				v.Stage = "saved"
 			}
 		case "/explore":
@@ -430,6 +467,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			for _, item := range v.Discoveries {
 				if fmt.Sprint(item.ID) == r.FormValue("id") {
 					p := item.Proposal
+					v.State.Resume.Text = item.OriginalMaterial
 					v.State.Responses = append([]discovery.Response(nil), item.Responses...)
 					v.State.Proposal = &p
 					v.Editing = item.ID
@@ -437,8 +475,17 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 			}
+		case "/show-connections":
+			if v.Synthesis != nil {
+				v.Stage = "connections"
+			}
 		case "/connections":
 			if len(v.Discoveries) >= 2 {
+				if v.Challenge != "" {
+					v.Notice = "A connection was withdrawn. Correct a discovery before requesting a new analysis; the withdrawn interpretation will not be silently restored."
+					v.Stage = "saved"
+					break
+				}
 				out, err := discovery.SynthesizeConnections(r.Context(), s.generate, connectionEvidence(v.Discoveries))
 				if err != nil {
 					v.Notice = message(err)
@@ -451,11 +498,19 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 		case "/challenge":
 			if v.Synthesis != nil {
 				challenge := strings.TrimSpace(r.FormValue("challenge"))
+				id := r.FormValue("connection_id")
 				if challenge == "" || len(challenge) > 2000 {
 					v.Notice = "Enter a challenge of up to 2,000 bytes."
-				} else {
-					v.Challenge = challenge
-					v.Notice = "Your challenge is recorded as your perspective, not approved evidence."
+					break
+				}
+				for i, c := range v.Synthesis.Connections {
+					if c.ID == id {
+						v.Challenge = challenge
+						v.PreviousInterpretation = c.Capability + ": " + c.Interpretation
+						v.Synthesis.Connections = append(v.Synthesis.Connections[:i], v.Synthesis.Connections[i+1:]...)
+						v.Notice = "That interpretation was withdrawn from your current portrait. Your objection is recorded separately, not treated as verified evidence."
+						break
+					}
 				}
 				v.Stage = "connections"
 			}
@@ -477,8 +532,15 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			v.InputKind = ""
 			v.OriginalLeads = nil
 			v.Challenge = ""
+			v.PreviousInterpretation = ""
 		}
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+		if r.Header.Get("X-Realize-Fragment") == "1" {
+			if e := page.Execute(w, v); e != nil {
+				log.Print("template rendering failed")
+			}
+		} else {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+		}
 		return
 	}
 	if r.URL.Path == "/download" && v.Saved != nil {
@@ -504,7 +566,11 @@ func connectionEvidence(items []evidence) []discovery.ConnectionEvidence {
 	for _, item := range items {
 		var sources []string
 		for _, response := range item.Responses {
-			sources = append(sources, response.Source.Text)
+			if response.Question == "Candidate correction during review" {
+				sources = append(sources, "Candidate correction (supersedes conflicting earlier statements): "+response.Source.Text)
+			} else {
+				sources = append(sources, response.Source.Text)
+			}
 		}
 		out = append(out, discovery.ConnectionEvidence{ID: item.ID, Revision: item.Revision, Title: item.Title, Situation: item.Experience, Actions: item.Claim, OutcomeState: "unknown", SourceTexts: sources})
 	}
@@ -524,12 +590,33 @@ func (s *server) next(r *http.Request, v *session) {
 		v.State = st
 	}
 }
+
+//go:embed identity/*
+var identity embed.FS
+
 func main() {
 	loadEnv(".env")
 	s := &server{sessions: map[string]*session{}, generate: generate}
+	http.Handle("/identity/", http.FileServer(http.FS(identity)))
 	http.HandleFunc("/", s.serve)
-	log.Print("YourMove Realize listening at http://localhost:8080")
-	log.Fatal(http.ListenAndServe("127.0.0.1:8080", nil))
+	addr := "127.0.0.1:" + env("REALIZE_PORT", "8080")
+	log.Printf("YourMove Realize listening at http://%s", addr)
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
-var page = template.Must(template.New("page").Parse(pageHTML))
+func quoteExcerpt(s string) string {
+	r := []rune(s)
+	if len(r) <= 160 {
+		return s
+	}
+	end := 160
+	for end > 0 && r[end] != ' ' && r[end] != '\n' {
+		end--
+	}
+	if end == 0 {
+		end = 160
+	}
+	return string(r[:end])
+}
+
+var page = template.Must(template.New("page").Funcs(template.FuncMap{"quoteExcerpt": quoteExcerpt, "longQuote": func(s string) bool { return len([]rune(s)) > 160 }}).Parse(pageHTML))

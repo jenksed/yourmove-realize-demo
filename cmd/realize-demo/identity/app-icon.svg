@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="YourMove Realize app icon">
+  <title>YourMove Realize</title>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="#E9EEF8"/>
+  <rect x="4.75" y="4.75" width="118.5" height="118.5" rx="27" fill="none" stroke="#215C43" stroke-opacity="0.22" stroke-width="1.5"/>
+  <g transform="translate(16,34) scale(2)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 30 L15 9 L24 24 L33 9 L44 30" stroke="#215C43" stroke-width="9"/>
+    <path d="M4 30 L15 9 L24 24 L33 9 L44 30" stroke="#AAC5FF" stroke-width="6"/>
+    <path d="M4 30 L15 9 L24 24 L33 9 L44 30" stroke="#FFFFFF" stroke-width="3.2"/>
+  </g>
+  <path d="M0 -7 L1.8 -1.8 L7 0 L1.8 1.8 L0 7 L-1.8 1.8 L-7 0 L-1.8 -1.8 Z" transform="translate(94,26)" fill="#0F6E44"/>
+  <path d="M0 -5 L1.3 -1.3 L5 0 L1.3 1.3 L0 5 L-1.3 1.3 L-5 0 L-1.3 -1.3 Z" transform="translate(106,36)" fill="#3459A5"/>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 300" role="img" aria-label="YourMove Realize">
+  <title>YourMove Realize</title>
+  <style>
+    .ym { fill: #242933; }
+    .rz { fill: #0F6E44; }
+    .rear { stroke: #215C43; }
+    .mid { stroke: #AAC5FF; }
+    .plane { stroke: #E9EEF8; }
+    .sp2 { fill: #AAC5FF; }
+    @media (prefers-color-scheme: dark) {
+      .ym { fill: #EDF0F5; }
+      .rz { fill: #78B696; }
+      .rear { stroke: #78B696; }
+      .plane { stroke: #D4E1FB; }
+    }
+  </style>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path class="rear" d="M136 62 L157 28 L180 54 L203 28 L224 62" stroke-width="10"/>
+    <path class="mid" d="M136 62 L157 28 L180 54 L203 28 L224 62" stroke-width="6.5"/>
+    <path class="plane" d="M136 62 L157 28 L180 54 L203 28 L224 62" stroke-width="3.4"/>
+  </g>
+  <text x="180" y="122" text-anchor="middle" font-family="Jost, 'Avenir Next', 'Segoe UI', sans-serif" font-size="42" font-weight="800" letter-spacing="-0.5" class="ym">YourMove</text>
+  <text x="180" y="212" text-anchor="middle" font-family="Jost, 'Avenir Next', 'Segoe UI', sans-serif" font-size="78" font-weight="800" letter-spacing="-1.5" class="rz">Realize</text>
+  <path class="rz" d="M0 -9 L2.2 -2.2 L9 0 L2.2 2.2 L0 9 L-2.2 2.2 L-9 0 L-2.2 -2.2 Z" transform="translate(292,128)"/>
+  <path class="sp2" d="M0 -6.5 L1.6 -1.6 L6.5 0 L1.6 1.6 L0 6.5 L-1.6 1.6 L-6.5 0 L-1.6 -1.6 Z" transform="translate(310,140)"/>
+</svg>

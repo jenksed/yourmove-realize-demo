@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 96" role="img" aria-label="YourMove Realize">
+  <title>YourMove Realize</title>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 62 L23 41 L32 56 L41 41 L52 62" stroke="#78B696" stroke-width="9"/>
+    <path d="M12 62 L23 41 L32 56 L41 41 L52 62" stroke="#AAC5FF" stroke-width="6"/>
+    <path d="M12 62 L23 41 L32 56 L41 41 L52 62" stroke="#D4E1FB" stroke-width="3.2"/>
+  </g>
+  <text x="72" y="63" font-family="Jost, 'Avenir Next', 'Segoe UI', sans-serif" font-size="40" font-weight="800" letter-spacing="-0.5" fill="#EDF0F5">YourMove<tspan dx="10" fill="#78B696">Realize</tspan></text>
+  <path d="M0 -8 L2 -2 L8 0 L2 2 L0 8 L-2 2 L-8 0 L-2 -2 Z" transform="translate(430,20)" fill="#78B696"/>
+  <path d="M0 -6 L1.5 -1.5 L6 0 L1.5 1.5 L0 6 L-1.5 1.5 L-6 0 L-1.5 -1.5 Z" transform="translate(446,30)" fill="#AAC5FF"/>
+</svg>
