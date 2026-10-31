@@ -109,3 +109,49 @@ func TestBasetenRequest(t *testing.T) {
 		t.Fatal("key leaked")
 	}
 }
+
+func TestPastedIntakeAndMultipleDiscoveries(t *testing.T) {
+	s := &server{sessions: map[string]*session{}, generate: func(_ context.Context, _, _ string) (string, error) {
+		return `{"question":"Tell me about a specific incident.","proposal":null}`, nil
+	}}
+	v := &session{Stage: "welcome"}
+	s.sessions["test"] = v
+	post := func(path string, values url.Values) {
+		r := httptest.NewRequest("POST", path, strings.NewReader(values.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.AddCookie(&http.Cookie{Name: "realize_session", Value: "test"})
+		s.serve(httptest.NewRecorder(), r)
+	}
+	post("/paste", url.Values{"career_text": {"Skills: troubleshooting and customer communication"}})
+	if v.Stage != "preview" || v.State.Resume.Kind != "pasted_text" {
+		t.Fatal("pasted provenance lost")
+	}
+	post("/begin", url.Values{"approach": {"focused"}})
+	if v.Stage != "conversation" || v.State.Question == "" {
+		t.Fatal("focused interview did not start")
+	}
+	save := func(statement, title string) {
+		v.State.Responses = nil
+		v.State.Question = "What did you do?"
+		var err error
+		v.State, err = discovery.RecordAnswer(v.State, statement)
+		if err != nil {
+			t.Fatal(err)
+		}
+		v.State.Proposal = &discovery.Proposal{Title: title, Experience: statement, Claim: statement, SourceID: "response-1", Quote: statement, Unresolved: []string{"Outcome unknown"}}
+		v.Stage = "review"
+		post("/keep", url.Values{"title": {title}, "experience": {statement}, "claim": {statement}})
+	}
+	save("I investigated a login problem.", "Investigation")
+	post("/explore", url.Values{"focus": {"Customer communication"}})
+	save("I explained the findings to the customer.", "Communication")
+	if len(v.Discoveries) != 2 || v.Discoveries[0].ID == v.Discoveries[1].ID || v.Discoveries[0].SourceText != "I investigated a login problem." {
+		t.Fatal("discoveries not preserved")
+	}
+	v.Synthesis = &discovery.ConnectionSynthesis{}
+	post("/edit", url.Values{"id": {"1"}})
+	post("/keep", url.Values{"title": {"Corrected"}, "experience": {"I investigated a login problem."}, "claim": {"I investigated a login problem."}})
+	if v.Synthesis != nil || v.Discoveries[0].Revision != 2 || len(v.Discoveries) != 2 {
+		t.Fatal("edit did not invalidate synthesis")
+	}
+}

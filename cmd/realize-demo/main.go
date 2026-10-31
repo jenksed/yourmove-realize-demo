@@ -29,8 +29,11 @@ const maxUpload = 10 << 20
 
 type evidence struct {
 	discovery.Proposal
-	SourceText   string `json:"source_text"`
-	ReviewStatus string `json:"review_status"`
+	SourceText   string               `json:"source_text"`
+	ReviewStatus string               `json:"review_status"`
+	ID           int64                `json:"id"`
+	Revision     int64                `json:"revision"`
+	Responses    []discovery.Response `json:"responses"`
 }
 type session struct {
 	mu                                sync.Mutex
@@ -38,6 +41,12 @@ type session struct {
 	Truncated                         bool
 	State                             discovery.State
 	Saved                             *evidence
+	Discoveries                       []evidence
+	Synthesis                         *discovery.ConnectionSynthesis
+	Editing                           int64
+	InputKind                         string
+	OriginalLeads                     []discovery.Lead
+	Challenge                         string
 }
 type server struct {
 	mu       sync.Mutex
@@ -264,14 +273,42 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			v.Truncated = truncated
 			v.State = state
 			v.Saved = nil
+			v.Discoveries = nil
+			v.Synthesis = nil
+			v.InputKind = "upload"
+			v.OriginalLeads = nil
+			v.Stage = "preview"
+		case "/paste":
+			r.Body = http.MaxBytesReader(w, r.Body, 100<<10)
+			if err := r.ParseForm(); err != nil {
+				v.Notice = "Text is too large. Please use up to 100 KiB."
+				break
+			}
+			t := strings.TrimSpace(r.FormValue("career_text"))
+			excerpt, truncated := bounded(t)
+			state, err := discovery.New(excerpt)
+			if err != nil {
+				v.Notice = "Please enter some career-related text."
+				break
+			}
+			state.Resume.Kind = "pasted_text"
+			v.FullText, v.Filename, v.InputKind, v.Truncated, v.State = t, "Pasted career text", "paste", truncated, state
+			v.Discoveries, v.Saved, v.Synthesis = nil, nil, nil
+			v.OriginalLeads = nil
 			v.Stage = "preview"
 		case "/begin":
 			if v.Stage == "preview" {
+				if v.InputKind == "paste" && r.FormValue("approach") == "focused" {
+					v.Stage = "conversation"
+					s.next(r, v)
+					break
+				}
 				leads, e := discovery.FindLeads(r.Context(), s.generate, v.State.Resume.Text)
 				if e != nil {
 					v.Notice = message(e)
 				} else {
 					v.State.Leads = leads
+					v.OriginalLeads = append([]discovery.Lead(nil), leads...)
 					v.Stage = "leads"
 				}
 			}
@@ -337,8 +374,94 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 						source = a.Source.Text
 					}
 				}
-				v.Saved = &evidence{Proposal: p, SourceText: source, ReviewStatus: "candidate_reviewed"}
+				item := evidence{Proposal: p, SourceText: source, ReviewStatus: "candidate_reviewed", Responses: append([]discovery.Response(nil), v.State.Responses...)}
+				if v.Editing != 0 {
+					for i := range v.Discoveries {
+						if v.Discoveries[i].ID == v.Editing {
+							item.ID = v.Editing
+							item.Revision = v.Discoveries[i].Revision + 1
+							v.Discoveries[i] = item
+							break
+						}
+					}
+				} else if len(v.Discoveries) < 4 {
+					item.ID = int64(len(v.Discoveries) + 1)
+					item.Revision = 1
+					v.Discoveries = append(v.Discoveries, item)
+				} else {
+					v.Notice = "This demo holds up to four discoveries."
+					break
+				}
+				v.Saved = &item
+				v.Editing = 0
+				v.Synthesis = nil
+				v.Challenge = ""
 				v.Stage = "saved"
+			}
+		case "/explore":
+			if len(v.Discoveries) < 4 && v.State.Resume.Text != "" {
+				resume := v.State.Resume
+				leads := v.OriginalLeads
+				v.State = discovery.State{Resume: resume, Leads: leads}
+				v.Editing = 0
+				focus := strings.TrimSpace(r.FormValue("focus"))
+				if len(focus) > 120 {
+					v.Notice = "Please keep the next focus under 120 bytes."
+					v.Stage = "saved"
+					break
+				}
+				if focus != "" {
+					v.State.Leads = []discovery.Lead{{ID: "lead-1", Title: focus, Why: "The candidate chose this direction for further exploration."}}
+					v.State.SelectedLeadID = "lead-1"
+					v.Stage = "conversation"
+					s.next(r, v)
+				} else if len(leads) > 0 {
+					v.Stage = "leads"
+				} else {
+					v.Stage = "conversation"
+					s.next(r, v)
+				}
+			}
+		case "/collection":
+			if len(v.Discoveries) > 0 {
+				v.Stage = "saved"
+			}
+		case "/edit":
+			for _, item := range v.Discoveries {
+				if fmt.Sprint(item.ID) == r.FormValue("id") {
+					p := item.Proposal
+					v.State.Responses = append([]discovery.Response(nil), item.Responses...)
+					v.State.Proposal = &p
+					v.Editing = item.ID
+					v.Stage = "review"
+					break
+				}
+			}
+		case "/connections":
+			if len(v.Discoveries) >= 2 {
+				out, err := discovery.SynthesizeConnections(r.Context(), s.generate, connectionEvidence(v.Discoveries))
+				if err != nil {
+					v.Notice = message(err)
+				} else {
+					v.Synthesis = &out
+					v.Challenge = ""
+					v.Stage = "connections"
+				}
+			}
+		case "/challenge":
+			if v.Synthesis != nil {
+				challenge := strings.TrimSpace(r.FormValue("challenge"))
+				if challenge == "" || len(challenge) > 2000 {
+					v.Notice = "Enter a challenge of up to 2,000 bytes."
+				} else {
+					v.Challenge = challenge
+					v.Notice = "Your challenge is recorded as your perspective, not approved evidence."
+				}
+				v.Stage = "connections"
+			}
+		case "/takeaway":
+			if len(v.Discoveries) > 0 {
+				v.Stage = "takeaway"
 			}
 		case "/reset":
 			v.Filename = ""
@@ -348,6 +471,12 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			v.Truncated = false
 			v.State = discovery.State{}
 			v.Saved = nil
+			v.Discoveries = nil
+			v.Synthesis = nil
+			v.Editing = 0
+			v.InputKind = ""
+			v.OriginalLeads = nil
+			v.Challenge = ""
 		}
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
@@ -355,7 +484,11 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/download" && v.Saved != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Content-Disposition", `attachment; filename="career-evidence.json"`)
-		json.NewEncoder(w).Encode(v.Saved)
+		if len(v.Discoveries) == 1 {
+			json.NewEncoder(w).Encode(v.Saved)
+		} else {
+			json.NewEncoder(w).Encode(v.Discoveries)
+		}
 		return
 	}
 	if r.URL.Path != "/" {
@@ -365,6 +498,17 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 	if e := page.Execute(w, v); e != nil {
 		log.Print("template rendering failed")
 	}
+}
+func connectionEvidence(items []evidence) []discovery.ConnectionEvidence {
+	out := make([]discovery.ConnectionEvidence, 0, len(items))
+	for _, item := range items {
+		var sources []string
+		for _, response := range item.Responses {
+			sources = append(sources, response.Source.Text)
+		}
+		out = append(out, discovery.ConnectionEvidence{ID: item.ID, Revision: item.Revision, Title: item.Title, Situation: item.Experience, Actions: item.Claim, OutcomeState: "unknown", SourceTexts: sources})
+	}
+	return out
 }
 func message(e error) string {
 	if errors.Is(e, discovery.ErrInvalid) {

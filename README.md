@@ -1,6 +1,6 @@
 # YourMove Realize
 
-A standalone career discovery demo: upload a résumé, choose an investigation lead, talk with Realize, and review and export candidate-controlled Career Evidence. The existing discovery package generates leads and questions and validates source-linked proposals; the web app handles documents, sessions and review. Candidate review is not independent verification.
+A standalone career discovery demo: upload a résumé or paste career material, investigate experiences, review discoveries, and examine connections across them. The existing discovery package generates leads and questions and validates source-linked proposals; the web app handles documents, sessions and review. Candidate review is not independent verification.
 
 ## Run locally
 
@@ -23,8 +23,8 @@ go test -count=1 ./...
 go run ./cmd/realize-demo
 ```
 
-Open http://localhost:8080. Upload one of the fictional Avery Morgan PDF or DOCX fixtures in `realize-demo-pack/fixtures/`, confirm the extracted text, and begin discovery. Relevant résumé text and answers are transmitted to Baseten after the displayed disclosure. The engine considers at most the first 8,000 UTF-8 bytes; the interface discloses when a document exceeds that limit.
+Open http://localhost:8080. Upload one of the fictional Avery Morgan PDF or DOCX fixtures in `realize-demo-pack/fixtures/`, or paste career text. Confirm the material and begin discovery. For pasted material, choose a focused conversation or model-generated starting points. Relevant résumé text and answers are transmitted to Baseten after the displayed disclosure. The engine considers at most the first 8,000 UTF-8 bytes; the interface discloses when a document exceeds that limit.
 
-The session is held in server memory and survives browser refreshes while the process runs. It is lost on restart; download the reviewed JSON for a durable copy. Uploaded originals are not retained. An answer is recorded before the next inference request, so a failed request can be retried without re-entering it. Proposal citations are checked against the exact recorded answer, but a matching quote cannot prove that the model's interpretation is correct. Review and correct it before keeping it.
+The session is held in server memory and survives browser refreshes while the process runs. It is lost on restart; use the printable takeaway or download the reviewed JSON for a durable copy. Up to four discoveries can be kept in a session. Two or more can be sent to Baseten for connection synthesis; editing a discovery invalidates the prior synthesis. Uploaded originals are not retained. An answer is recorded before the next inference request, so a failed request can be retried without re-entering it. Proposal citations are checked against the exact recorded answer, but a matching quote cannot prove that the model's interpretation is correct. Review and correct it before keeping it.
 
 The historical CLI and benchmark commands and `docs/EXECUTION.md` describe earlier experiments, not this demo's configured provider or product boundary. They are not required to run the web application.
