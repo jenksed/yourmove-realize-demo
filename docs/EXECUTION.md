@@ -1,3 +1,5 @@
+> **Historical record:** This document describes an earlier host integration and Meta API experiments. It is not the setup, provider configuration, persistence behavior, or acceptance report for the standalone Realize demo. See [README](../README.md) for the current Baseten-only web application.
+
 # October 26 engineering result and handoff
 
 ## Result

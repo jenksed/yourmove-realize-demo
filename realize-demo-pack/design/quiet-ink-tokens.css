@@ -1,0 +1,55 @@
+/* Quiet Ink — YourMove Realize demo reference. Import or adapt; not required runtime CSS. */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+  --ym-canvas: #F5F4F1;
+  --ym-surface: #FFFFFF;
+  --ym-surface-alt: #F0F2F5;
+  --ym-ink: #242933;
+  --ym-muted: #606773;
+  --ym-border: #D9DDE3;
+  --ym-primary: #3459A5;
+  --ym-primary-hover: #284984;
+  --ym-primary-ink: #FFFFFF;
+  --ym-success: #2C694D;
+  --ym-caution: #815719;
+  --ym-danger: #A13736;
+  --ym-focus: #3459A5;
+  --ym-shadow: 0 18px 54px rgba(29, 39, 58, .06);
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ym-canvas: #191C22;
+  --ym-surface: #22262E;
+  --ym-surface-alt: #2B3039;
+  --ym-ink: #EDF0F5;
+  --ym-muted: #AEB6C2;
+  --ym-border: #343A45;
+  --ym-primary: #AAC5FF;
+  --ym-primary-hover: #C1D5FF;
+  --ym-primary-ink: #191C22;
+  --ym-success: #A3D7B9;
+  --ym-caution: #E4C48E;
+  --ym-danger: #F3A3A3;
+  --ym-focus: #AAC5FF;
+  --ym-shadow: 0 18px 54px rgba(0, 0, 0, .16);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --ym-canvas: #191C22;
+    --ym-surface: #22262E;
+    --ym-surface-alt: #2B3039;
+    --ym-ink: #EDF0F5;
+    --ym-muted: #AEB6C2;
+    --ym-border: #343A45;
+    --ym-primary: #AAC5FF;
+    --ym-primary-hover: #C1D5FF;
+    --ym-primary-ink: #191C22;
+    --ym-success: #A3D7B9;
+    --ym-caution: #E4C48E;
+    --ym-danger: #F3A3A3;
+    --ym-focus: #AAC5FF;
+    --ym-shadow: 0 18px 54px rgba(0, 0, 0, .16);
+  }
+}
