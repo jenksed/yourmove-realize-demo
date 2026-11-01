@@ -5,8 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -461,5 +463,36 @@ func TestVoiceSelectionRoute(t *testing.T) {
 		if v.Voice != "" {
 			t.Fatal("voice did not reset")
 		}
+	}
+}
+
+func TestTranscriptionAuthFailureLogsSanitizedDiagnostics(t *testing.T) {
+	t.Setenv("DEEPGRAM_API_KEY", "test-key-sentinel-xyz")
+	old := speechTransport
+	defer func() { speechTransport = old }()
+	speechTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.Header.Get("Authorization") != "Token test-key-sentinel-xyz" {
+			t.Error("incorrect provider request")
+		}
+		return providerResponse(401, "application/json", `{"err_code":"INVALID_AUTH","err_msg":"Invalid credentials.","request_id":"01a1975b-fa30-7e92-829b-e81902280f87"}`), nil
+	})
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer log.SetOutput(os.Stderr)
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/speech/transcribe", strings.NewReader("audio"))
+	r.Header.Set("Content-Type", "audio/webm")
+	transcribe(w, r)
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("auth failure status=%d", w.Code)
+	}
+	logs := buf.String()
+	for _, want := range []string{"provider_err_code=INVALID_AUTH", "provider_request_id=01a1975b-fa30-7e92-829b-e81902280f87", "provider_status=401"} {
+		if !strings.Contains(logs, want) {
+			t.Fatalf("diagnostic log missing %q in %q", want, logs)
+		}
+	}
+	if strings.Contains(logs, "test-key-sentinel-xyz") || strings.Contains(w.Body.String(), "INVALID_AUTH") {
+		t.Fatal("sensitive diagnostic leaked")
 	}
 }

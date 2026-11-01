@@ -101,6 +101,7 @@ func transcribe(w http.ResponseWriter, r *http.Request) {
 	providerRequestID := ""
 	var providerMetadata struct {
 		RequestID string `json:"request_id"`
+		ErrCode   string `json:"err_code"`
 	}
 	_ = json.Unmarshal(providerBody, &providerMetadata)
 	providerRequestID = providerMetadata.RequestID
@@ -116,6 +117,7 @@ func transcribe(w http.ResponseWriter, r *http.Request) {
 	if providerRequestID != "" {
 		providerRequestID = safeProviderRequestID(providerRequestID)
 	}
+	providerErrCode := safeProviderRequestID(providerMetadata.ErrCode)
 	if resp.StatusCode != http.StatusOK {
 		status, code, message := http.StatusBadGateway, "speech_unavailable", "The transcription service could not process this recording. Try again or type your answer."
 		if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnprocessableEntity {
@@ -123,7 +125,7 @@ func transcribe(w http.ResponseWriter, r *http.Request) {
 		} else if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusServiceUnavailable {
 			status, code, message = http.StatusServiceUnavailable, "speech_busy", "Transcription is temporarily unavailable. Try again shortly or type your answer."
 		}
-		log.Printf("speech_transcribe request_id=%s provider_request_id=%s phase=provider_rejected mime=%q bytes=%d duration_ms=%s status=%d provider_status=%d elapsed_ms=%d", requestID, providerRequestID, contentType, len(audio), recordingDuration(r), status, resp.StatusCode, time.Since(started).Milliseconds())
+		log.Printf("speech_transcribe request_id=%s provider_request_id=%s provider_err_code=%s phase=provider_rejected mime=%q bytes=%d duration_ms=%s status=%d provider_status=%d elapsed_ms=%d", requestID, providerRequestID, providerErrCode, contentType, len(audio), recordingDuration(r), status, resp.StatusCode, time.Since(started).Milliseconds())
 		transcriptionError(w, requestID, status, code, message)
 		return
 	}
