@@ -256,6 +256,24 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid origin", 403)
 			return
 		}
+		switch r.URL.Path {
+		case "/speech/question":
+			if v.Stage != "conversation" || v.State.Question == "" || len(v.State.Responses) >= 6 {
+				http.Error(w, "No active question", http.StatusConflict)
+				return
+			}
+			speak(w, r, v.State.Question)
+			return
+		}
+		switch r.URL.Path {
+		case "/speech/transcribe":
+			if v.Stage != "conversation" || v.State.Question == "" {
+				http.Error(w, "No active question", http.StatusConflict)
+				return
+			}
+			transcribe(w, r)
+			return
+		}
 		v.Notice = ""
 		switch r.URL.Path {
 		case "/upload":
