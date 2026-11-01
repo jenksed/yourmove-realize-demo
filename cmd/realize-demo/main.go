@@ -395,6 +395,13 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 						source = a.Source.Text
 					}
 				}
+				// An unchanged model proposal is not candidate-authored evidence.
+				// Keep the reviewed factual description anchored to the exact source
+				// statement; edits made in the review field remain candidate wording.
+				if experience == strings.TrimSpace(before.Experience) && source != "" {
+					experience = source
+					p.Experience = source
+				}
 				item := evidence{Proposal: p, OriginalMaterial: v.State.Resume.Text, SourceText: source, ReviewStatus: "candidate_reviewed", Responses: append([]discovery.Response(nil), v.State.Responses...)}
 				original := before
 				item.OriginalProposal = &original

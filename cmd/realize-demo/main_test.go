@@ -84,6 +84,43 @@ func TestReviewAndFailedInference(t *testing.T) {
 		t.Fatal("re-edit lost provenance or changed source")
 	}
 }
+
+func TestKeepDiscoveryKeepsUnchangedProposalGroundedAndEditsCandidateAuthored(t *testing.T) {
+	tests := []struct {
+		name, source, proposal, expected string
+	}{
+		{"Priya read-aloud purpose", "I posted the wrong room number once because I relied on memory. Since then I read the layout sheet aloud with a second staff member before doors open.", "I read the layout sheet aloud with a second staff member to get event rooms ready.", "I posted the wrong room number once because I relied on memory. Since then I read the layout sheet aloud with a second staff member before doors open."},
+		{"Jordan customer callback", "I called a customer back after I found the account mismatch.", "I promised the customer I would call again after correcting the account.", "I called a customer back after I found the account mismatch."},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			st, _ := discovery.New("Resume excerpt")
+			st.Question = "What happened?"
+			st, _ = discovery.RecordAnswer(st, tt.source)
+			st.Proposal = &discovery.Proposal{Title: "Discovery", Experience: tt.proposal, Claim: "A possible interpretation", SourceID: "response-1", Quote: tt.source}
+			v := &session{Stage: "review", State: st}
+			s := &server{sessions: map[string]*session{"test": v}}
+			r := httptest.NewRequest("POST", "/keep", strings.NewReader(url.Values{"title": {"Discovery"}, "experience": {tt.proposal}, "claim": {"A possible interpretation"}}.Encode()))
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			r.AddCookie(&http.Cookie{Name: "realize_session", Value: "test"})
+			s.serve(httptest.NewRecorder(), r)
+			if v.Saved == nil || v.Saved.Experience != tt.expected || v.Saved.SourceText != tt.source {
+				t.Fatalf("archive experience = %q, want source-grounded %q", v.Saved.Experience, tt.expected)
+			}
+			// A changed review field is candidate-authored and must survive.
+			v.Stage = "review"
+			v.State.Proposal = &discovery.Proposal{Title: "Discovery", Experience: tt.proposal, Claim: "A possible interpretation", SourceID: "response-1", Quote: tt.source}
+			edit := "I read the layout sheet aloud with a colleague before opening, after I once used the wrong room number."
+			r = httptest.NewRequest("POST", "/keep", strings.NewReader(url.Values{"title": {"Discovery"}, "experience": {edit}, "claim": {"A possible interpretation"}, "correction": {"I now verify the room number with a second staff member."}}.Encode()))
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			r.AddCookie(&http.Cookie{Name: "realize_session", Value: "test"})
+			s.serve(httptest.NewRecorder(), r)
+			if v.Saved.Experience != edit || len(v.Saved.Responses) != 2 || v.Saved.Responses[1].Source.Text != "I now verify the room number with a second staff member." {
+				t.Fatal("candidate-authored wording or correction was not preserved")
+			}
+		})
+	}
+}
 func TestBasetenRequest(t *testing.T) {
 	var body map[string]any
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
