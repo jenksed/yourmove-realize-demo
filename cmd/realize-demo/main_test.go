@@ -302,3 +302,30 @@ func TestQuoteExcerptPreservesPrefix(t *testing.T) {
 		t.Fatal("excerpt must be an exact bounded prefix")
 	}
 }
+
+func TestOutcomesFollowReviewAndInvalidateOnCorrection(t *testing.T) {
+	st, _ := discovery.New("Customer service experience")
+	st.Question = "What did you do?"
+	st, _ = discovery.RecordAnswer(st, "I called customers to explain the delay.")
+	st.Proposal = &discovery.Proposal{Title: "Communication", Experience: "Called customers about a delay", Claim: "Clear communication", SourceID: "response-1", Quote: "I called customers to explain the delay."}
+	v := &session{Stage: "review", State: st}
+	s := &server{sessions: map[string]*session{"test": v}, generate: func(context.Context, string, string) (string, error) {
+		return `{"resume":[{"evidence_id":1,"evidence_revision":1,"source_id":"response-1","quote":"I called customers to explain the delay.","title":"Customer updates","explanation":"Shows how you kept customers informed.","wording":"Called customers to explain a delay."}],"strengths":[],"possibilities":[]}`, nil
+	}}
+	post := func(path string, vals url.Values) {
+		r := httptest.NewRequest("POST", path, strings.NewReader(vals.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.AddCookie(&http.Cookie{Name: "realize_session", Value: "test"})
+		s.serve(httptest.NewRecorder(), r)
+	}
+	post("/keep", url.Values{"title": {"Communication"}, "experience": {"Called customers about a delay"}, "claim": {"Clear communication"}})
+	post("/takeaway", url.Values{})
+	if v.Outcomes == nil || len(v.Outcomes.Resume) != 1 || v.Outcomes.Resume[0].Quote != st.Proposal.Quote {
+		t.Fatal("outcome or citation missing")
+	}
+	post("/edit", url.Values{"id": {"1"}})
+	post("/keep", url.Values{"title": {"Communication"}, "experience": {"Explained a delay"}, "claim": {"Clear communication"}})
+	if v.Outcomes != nil {
+		t.Fatal("correction retained stale outcomes")
+	}
+}

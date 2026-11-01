@@ -52,6 +52,7 @@ type session struct {
 	Saved                             *evidence
 	Discoveries                       []evidence
 	Synthesis                         *discovery.ConnectionSynthesis
+	Outcomes                          *discovery.Outcomes
 	Editing                           int64
 	InputKind                         string
 	OriginalLeads                     []discovery.Lead
@@ -426,6 +427,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				wasEditing := v.Editing != 0
 				v.Editing = 0
 				v.Synthesis = nil
+				v.Outcomes = nil
 				v.Challenge = ""
 				v.PreviousInterpretation = ""
 				if wasEditing {
@@ -516,6 +518,18 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 		case "/takeaway":
 			if len(v.Discoveries) > 0 {
+				if v.Outcomes == nil {
+					var sources []discovery.OutcomeSource
+					for _, item := range v.Discoveries {
+						sources = append(sources, discovery.OutcomeSource{ID: item.ID, Revision: item.Revision, Experience: item.Experience, Claim: item.Claim, Responses: item.Responses})
+					}
+					out, err := discovery.GenerateOutcomes(r.Context(), s.generate, sources)
+					if err != nil {
+						v.Notice = message(err)
+					} else {
+						v.Outcomes = &out
+					}
+				}
 				v.Stage = "takeaway"
 			}
 		case "/reset":
@@ -528,6 +542,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			v.Saved = nil
 			v.Discoveries = nil
 			v.Synthesis = nil
+			v.Outcomes = nil
 			v.Editing = 0
 			v.InputKind = ""
 			v.OriginalLeads = nil
