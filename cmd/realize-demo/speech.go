@@ -67,13 +67,17 @@ func transcribe(w http.ResponseWriter, r *http.Request) {
 }
 
 // speak synthesizes only the question supplied from the locked session.
-func speak(w http.ResponseWriter, r *http.Request, question string) {
+func speak(w http.ResponseWriter, r *http.Request, question, voice string) {
+	voiceID := env("FISH_AUDIO_VOICE_ID", "e3cd384158934cc9a01029cd7d278634")
+	if voice == "masculine" {
+		voiceID = env("FISH_AUDIO_MASCULINE_VOICE_ID", "bf322df2096a46f18c579d0baa36f41d")
+	}
 	key := strings.TrimSpace(os.Getenv("FISH_AUDIO_API_KEY"))
 	if key == "" {
 		http.Error(w, "Speech unavailable", http.StatusServiceUnavailable)
 		return
 	}
-	body, _ := json.Marshal(map[string]string{"text": question, "reference_id": "933563129e564b19a115bedd57b7406a", "format": "mp3"})
+	body, _ := json.Marshal(map[string]string{"text": question, "reference_id": voiceID, "format": "mp3"})
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.fish.audio/v1/tts", bytes.NewReader(body))

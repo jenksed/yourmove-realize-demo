@@ -12,9 +12,14 @@ Create `.env` in the project root:
 BASETEN_API_KEY=your-key-here
 BASETEN_MODEL=meta-models/muse-spark-open
 BASETEN_BASE_URL=https://inference.baseten.co/v1
+DEEPGRAM_API_KEY=your-deepgram-key
+FISH_AUDIO_API_KEY=your-fish-audio-key
+# Optional voice overrides; defaults are Laura and Adrian.
+FISH_AUDIO_VOICE_ID=e3cd384158934cc9a01029cd7d278634
+FISH_AUDIO_MASCULINE_VOICE_ID=bf322df2096a46f18c579d0baa36f41d
 ```
 
-Existing environment variables take precedence over `.env`. The model and base URL are optional. Keep the key private; `.env` is ignored by Git. The application uses Baseten's chat completions endpoint with Meta Muse Spark Open; it never falls back to another provider or model. A Baseten key must have access to the configured model. Requests are not retried automatically.
+Existing environment variables take precedence over `.env`. Choose the interviewer voice before starting: Laura is the default, and Adrian is also available. The choice stays with the session. To override the reference IDs, set `FISH_AUDIO_VOICE_ID` for Laura and `FISH_AUDIO_MASCULINE_VOICE_ID` for Adrian and restart the app. The browser’s default voice is used as a fallback if Fish Audio fails. The model and base URL are optional. Keep the key private; `.env` is ignored by Git. The application uses Baseten's chat completions endpoint with Meta Muse Spark Open; it never falls back to another provider or model. A Baseten key must have access to the configured model. Requests are not retried automatically.
 
 The hackathon Baseten account used by the companion project has access to the restricted model `meta-models/muse-spark-open-1026`. If the default model returns HTTP 403 with that account, explicitly set `BASETEN_MODEL=meta-models/muse-spark-open-1026` in `.env` and restart. The application will use exactly the configured model; it does not switch models automatically. The discovery request uses JSON output, low reasoning effort and a 3,072-token cap, matching the companion project's working Baseten profile.
 

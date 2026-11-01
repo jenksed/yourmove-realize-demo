@@ -2,11 +2,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	discovery "github.com/jenksed/yourmove-career-discovery"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -53,25 +56,41 @@ func TestTranscription(t *testing.T) {
 }
 func TestQuestionSpeech(t *testing.T) {
 	t.Setenv("FISH_AUDIO_API_KEY", "test-key")
+	t.Setenv("FISH_AUDIO_VOICE_ID", "audition-voice-id")
+	wantVoice := "audition-voice-id"
 	old := speechTransport
 	defer func() { speechTransport = old }()
 	speechTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		body, _ := io.ReadAll(r.Body)
-		if r.Header.Get("model") != "s2.1-pro-free" || r.Header.Get("Authorization") != "Bearer test-key" || !bytes.Contains(body, []byte("Current question?")) {
+		if r.Header.Get("model") != "s2.1-pro-free" || r.Header.Get("Authorization") != "Bearer test-key" || !bytes.Contains(body, []byte("Current question?")) || !bytes.Contains(body, []byte(`"reference_id":"`+wantVoice+`"`)) {
 			t.Error("incorrect Fish request")
 		}
 		return providerResponse(200, "audio/mpeg", "mp3-data"), nil
 	})
 	w := httptest.NewRecorder()
-	speak(w, httptest.NewRequest("POST", "/speech/question", nil), "Current question?")
+	speak(w, httptest.NewRequest("POST", "/speech/question", nil), "Current question?", "feminine")
 	if w.Code != 200 || w.Body.String() != "mp3-data" {
 		t.Fatal("audio missing")
+	}
+	t.Setenv("FISH_AUDIO_VOICE_ID", "")
+	wantVoice = "e3cd384158934cc9a01029cd7d278634"
+	w = httptest.NewRecorder()
+	speak(w, httptest.NewRequest("POST", "/speech/question", nil), "Current question?", "feminine")
+	if w.Code != 200 {
+		t.Fatal("default voice failed")
+	}
+	t.Setenv("FISH_AUDIO_MASCULINE_VOICE_ID", "")
+	wantVoice = "bf322df2096a46f18c579d0baa36f41d"
+	w = httptest.NewRecorder()
+	speak(w, httptest.NewRequest("POST", "/speech/question", nil), "Current question?", "masculine")
+	if w.Code != 200 {
+		t.Fatal("masculine voice failed")
 	}
 	speechTransport = roundTripFunc(func(*http.Request) (*http.Response, error) {
 		return providerResponse(402, "application/json", "private provider error"), nil
 	})
 	w = httptest.NewRecorder()
-	speak(w, httptest.NewRequest("POST", "/speech/question", nil), "Current question?")
+	speak(w, httptest.NewRequest("POST", "/speech/question", nil), "Current question?", "feminine")
 	if w.Code != 502 || strings.Contains(w.Body.String(), "private") {
 		t.Fatal("provider failure leaked or accepted")
 	}
@@ -102,5 +121,57 @@ func TestSpeechDoesNotRecordAnswer(t *testing.T) {
 	s.serve(w, r)
 	if w.Code != http.StatusConflict {
 		t.Fatalf("speech allowed in review: %d", w.Code)
+	}
+}
+
+func TestVoiceSelectionRoute(t *testing.T) {
+	t.Setenv("FISH_AUDIO_API_KEY", "test-key")
+	t.Setenv("FISH_AUDIO_VOICE_ID", "")
+	t.Setenv("FISH_AUDIO_MASCULINE_VOICE_ID", "")
+	old := speechTransport
+	defer func() { speechTransport = old }()
+	var got string
+	speechTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		b, _ := io.ReadAll(r.Body)
+		got = string(b)
+		return providerResponse(200, "audio/mpeg", "audio"), nil
+	})
+	for _, tc := range []struct{ choice, want string }{
+		{"", "e3cd384158934cc9a01029cd7d278634"},
+		{"feminine", "e3cd384158934cc9a01029cd7d278634"},
+		{"masculine", "bf322df2096a46f18c579d0baa36f41d"},
+	} {
+		st, _ := discovery.New("I helped customers solve problems at work.")
+		v := &session{Stage: "preview", InputKind: "paste", State: st}
+		s := &server{sessions: map[string]*session{"test": v}, generate: func(context.Context, string, string) (string, error) {
+			return `{"question":"What did you do?","proposal":null}`, nil
+		}}
+		post := func(path, body string) *httptest.ResponseRecorder {
+			r := httptest.NewRequest("POST", path, strings.NewReader(body))
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			r.AddCookie(&http.Cookie{Name: "realize_session", Value: "test"})
+			w := httptest.NewRecorder()
+			s.serve(w, r)
+			return w
+		}
+		post("/begin", "approach=focused&voice="+tc.choice)
+		if v.Stage != "conversation" || v.Voice != tc.choice {
+			t.Fatalf("begin: stage=%s voice=%s", v.Stage, v.Voice)
+		}
+		for _, body := range []string{"", "voice=masculine&text=Injected", "voice=feminine"} {
+			got = ""
+			w := post("/speech/question", body)
+			if w.Code != 200 || !strings.Contains(got, tc.want) || strings.Contains(got, "Injected") || !strings.Contains(got, "What did you do?") {
+				t.Fatalf("speech request: status=%d body=%s", w.Code, got)
+			}
+		}
+		post("/begin", "approach=focused&voice=masculine")
+		if v.Voice != tc.choice || len(v.State.Responses) != 0 {
+			t.Fatal("voice or answers changed during conversation")
+		}
+		post("/reset", "")
+		if v.Voice != "" {
+			t.Fatal("voice did not reset")
+		}
 	}
 }

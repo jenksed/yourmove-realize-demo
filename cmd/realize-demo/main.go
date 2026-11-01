@@ -49,6 +49,7 @@ type progressiveReveal struct{ Strength, Quote string }
 type session struct {
 	mu                                sync.Mutex
 	Filename, FullText, Stage, Notice string
+	Voice                             string
 	Truncated                         bool
 	State                             discovery.State
 	Progressive                       *progressiveReveal
@@ -262,7 +263,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "No active question", http.StatusConflict)
 				return
 			}
-			speak(w, r, v.State.Question)
+			speak(w, r, v.State.Question, v.Voice)
 			return
 		}
 		switch r.URL.Path {
@@ -337,6 +338,12 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			v.Stage = "preview"
 		case "/begin":
 			if v.Stage == "preview" {
+				voice := r.FormValue("voice")
+				if voice != "" && voice != "feminine" && voice != "masculine" {
+					v.Notice = "Please choose an interviewer voice."
+					break
+				}
+				v.Voice = voice
 				if v.InputKind == "paste" && r.FormValue("approach") == "focused" {
 					v.Stage = "conversation"
 					s.next(r, v)
@@ -628,6 +635,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				v.Stage = "takeaway"
 			}
 		case "/reset":
+			v.Voice = ""
 			v.EndRequested, v.SkipLead, v.BoundaryPaused = false, "", false
 			v.Filename = ""
 			v.FullText = ""
