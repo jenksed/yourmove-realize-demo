@@ -33,7 +33,7 @@ func TestTranscription(t *testing.T) {
 	for _, tc := range []struct {
 		media, body string
 		want        int
-	}{{"audio/webm;codecs=opus", "audio", 200}, {"text/plain", "audio", 415}, {"audio/wav", "", 400}, {"audio/wav", strings.Repeat("x", (10<<20)+1), 400}} {
+	}{{"audio/webm;codecs=opus", "audio", 200}, {"text/plain", "audio", 415}, {"audio/wav", "", 400}, {"audio/wav", strings.Repeat("x", (10<<20)+1), 413}} {
 		w := httptest.NewRecorder()
 		r := httptest.NewRequest("POST", "/speech/transcribe", strings.NewReader(tc.body))
 		r.Header.Set("Content-Type", tc.media)
@@ -52,8 +52,65 @@ func TestTranscription(t *testing.T) {
 	r := httptest.NewRequest("POST", "/speech/transcribe", strings.NewReader("audio"))
 	r.Header.Set("Content-Type", "audio/mp4")
 	transcribe(w, r)
-	if w.Code != 502 || strings.Contains(w.Body.String(), "private") {
+	if w.Code != 503 || strings.Contains(w.Body.String(), "private") {
 		t.Fatal("provider failure leaked or accepted")
+	}
+}
+
+func TestSafariMP4CodecContentTypeReachesDeepgramAsMP4(t *testing.T) {
+	t.Setenv("DEEPGRAM_API_KEY", "test-key")
+	old := speechTransport
+	defer func() { speechTransport = old }()
+	speechTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.Header.Get("Content-Type") != "audio/mp4" {
+			t.Errorf("Deepgram Content-Type = %q, want audio/mp4", r.Header.Get("Content-Type"))
+		}
+		return providerResponse(200, "application/json", `{"results":{"channels":[{"alternatives":[{"transcript":"mobile recording"}]}]}}`), nil
+	})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/speech/transcribe", strings.NewReader("recorded bytes"))
+	r.Header.Set("Content-Type", "audio/mp4;codecs=mp4a.40.2")
+	r.Header.Set("X-Recording-Duration-Ms", "5000")
+	transcribe(w, r)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), "mobile recording") || w.Header().Get("X-Realize-Request-ID") == "" {
+		t.Fatalf("Safari MP4 request status=%d body=%q request_id=%q", w.Code, w.Body.String(), w.Header().Get("X-Realize-Request-ID"))
+	}
+}
+
+func TestTranscriptionNoSpeechIsNotProviderFailure(t *testing.T) {
+	t.Setenv("DEEPGRAM_API_KEY", "test-key")
+	old := speechTransport
+	defer func() { speechTransport = old }()
+	speechTransport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return providerResponse(200, "application/json", `{"results":{"channels":[]}}`), nil
+	})
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest("POST", "/speech/transcribe", strings.NewReader("recorded bytes"))
+	r.Header.Set("Content-Type", "audio/mp4")
+	transcribe(w, r)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"transcript":""`) {
+		t.Fatalf("no-speech response status=%d body=%q", w.Code, w.Body.String())
+	}
+}
+
+func TestConversationQuestionPlaybackWiring(t *testing.T) {
+	state, _ := discovery.New("A short fictional career summary for the conversation view.")
+	state.Question = "What did you do when the process changed?"
+	var output bytes.Buffer
+	if err := page.Execute(&output, &session{Stage: "conversation", State: state}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`class="question-row"`, `aria-label="Play or replay question"`,
+		`.voice-controls .speak-question{display:grid`, `width:44px;height:44px`,
+		`const startsInterview=new URL(form.action).pathname==='/begin'`,
+		`if(startsInterview&&!next.querySelector('.notice'))autoQuestionPlayback=true`,
+		`nextQuestion.textContent!==previousQuestion && autoQuestionPlayback`,
+		`questionAudioText`, `err.name==='NotAllowedError'`,
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("conversation voice playback is missing %q", want)
+		}
 	}
 }
 func TestQuestionSpeech(t *testing.T) {
