@@ -124,6 +124,51 @@ func TestSpeechAllowancesAndKillSwitch(t *testing.T) {
 	}
 }
 
+func TestDefaultSTTSessionAllowanceAndOverride(t *testing.T) {
+	t.Setenv("REALIZE_SPEECH_ENABLED", "true")
+	t.Setenv("REALIZE_STT_SESSION_LIMIT", "")
+	t.Setenv("REALIZE_STT_SERVER_LIMIT", "50")
+	t.Setenv("DEEPGRAM_API_KEY", "test-key")
+	old := speechTransport
+	defer func() { speechTransport = old }()
+	speechTransport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return providerResponse(200, "application/json", `{"results":{"channels":[{"alternatives":[{"transcript":"heard words"}]}]}}`), nil
+	})
+	request := func(s *server, cookie string) int {
+		r := httptest.NewRequest("POST", "/speech/transcribe", strings.NewReader("audio"))
+		r.Header.Set("Content-Type", "audio/webm")
+		r.AddCookie(&http.Cookie{Name: "realize_session", Value: cookie})
+		w := httptest.NewRecorder()
+		s.serve(w, r)
+		return w.Code
+	}
+	newServer := func(cookie string) *server {
+		state, _ := discovery.New("Resume material long enough for interview")
+		state.Question = "What happened?"
+		return &server{sessions: map[string]*session{cookie: {Stage: "conversation", State: state}}}
+	}
+	defaultServer := newServer("default")
+	for i := 0; i < 6; i++ {
+		if got := request(defaultServer, "default"); got != http.StatusOK {
+			t.Fatalf("default STT request %d returned %d; want 200", i+1, got)
+		}
+	}
+	if got := request(defaultServer, "default"); got != http.StatusTooManyRequests {
+		t.Fatalf("seventh default STT request returned %d; want 429", got)
+	}
+
+	t.Setenv("REALIZE_STT_SESSION_LIMIT", "2")
+	overrideServer := newServer("override")
+	for i := 0; i < 2; i++ {
+		if got := request(overrideServer, "override"); got != http.StatusOK {
+			t.Fatalf("override STT request %d returned %d; want 200", i+1, got)
+		}
+	}
+	if got := request(overrideServer, "override"); got != http.StatusTooManyRequests {
+		t.Fatalf("request above override returned %d; want 429", got)
+	}
+}
+
 func TestSpeechRoutesReleaseSessionLockDuringProviderCall(t *testing.T) {
 	t.Setenv("REALIZE_SPEECH_ENABLED", "true")
 	t.Setenv("FISH_AUDIO_API_KEY", "test-key")

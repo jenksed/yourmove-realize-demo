@@ -112,7 +112,7 @@ func (s *server) reserveSpeech(v *session, tts bool) bool {
 		v.SpeechTTSCount++
 		s.speechTTSCount++
 	} else {
-		if v.SpeechSTTCount >= intEnv("REALIZE_STT_SESSION_LIMIT", 5) || s.speechSTTCount >= intEnv("REALIZE_STT_SERVER_LIMIT", 50) {
+		if v.SpeechSTTCount >= intEnv("REALIZE_STT_SESSION_LIMIT", 6) || s.speechSTTCount >= intEnv("REALIZE_STT_SERVER_LIMIT", 50) {
 			return false
 		}
 		v.SpeechSTTCount++
