@@ -22,6 +22,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	discovery "github.com/jenksed/yourmove-career-discovery"
@@ -50,6 +51,8 @@ type progressiveReveal struct{ Strength, Quote string }
 type session struct {
 	mu                                sync.Mutex
 	Filename, FullText, Stage, Notice string
+	CandidateFirstName                string
+	WelcomeActive                     bool
 	Voice                             string
 	Truncated                         bool
 	State                             discovery.State
@@ -283,6 +286,106 @@ func extract(name string, data []byte) (string, error) {
 	}
 	return out, nil
 }
+
+// firstNameFromCareerText only accepts a clearly presented name at the very
+// top of the material, corroborated by a matching email in the header. This
+// intentionally prefers no name over mistaking an employer or contact for one.
+func firstNameFromCareerText(text string) string {
+	lines := strings.Split(text, "\n")
+	firstLine := ""
+	firstIndex := -1
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			firstLine, firstIndex = line, i
+			break
+		}
+	}
+	if firstIndex < 0 {
+		return ""
+	}
+	tokens := strings.Fields(firstLine)
+	if len(tokens) < 2 || len(tokens) > 3 {
+		return ""
+	}
+	normalized := make([]string, 0, len(tokens))
+	for _, token := range tokens {
+		name := normalizeNameToken(token)
+		if name == "" {
+			return ""
+		}
+		normalized = append(normalized, name)
+	}
+	fullName := strings.Join(normalized, "")
+	firstLast := normalized[0] + normalized[len(normalized)-1]
+	for i := firstIndex + 1; i < len(lines) && i <= firstIndex+5; i++ {
+		for _, field := range strings.Fields(lines[i]) {
+			field = strings.Trim(field, "<>()[]{};,|")
+			local, domain, ok := strings.Cut(field, "@")
+			if !ok || !strings.Contains(domain, ".") {
+				continue
+			}
+			var emailName strings.Builder
+			for _, r := range strings.ToLower(local) {
+				if unicode.IsLetter(r) {
+					emailName.WriteRune(r)
+				}
+			}
+			if emailName.String() == fullName || emailName.String() == firstLast {
+				return displayFirstName(tokens[0])
+			}
+		}
+	}
+	return ""
+}
+
+func normalizeNameToken(token string) string {
+	token = strings.Trim(token, " \t,;:|()[]{}<>\"“”")
+	var normalized strings.Builder
+	for i, r := range token {
+		if unicode.IsLetter(r) {
+			normalized.WriteRune(unicode.ToLower(r))
+			continue
+		}
+		if i > 0 && (r == '-' || r == '\'' || r == '’' || r == '.') {
+			continue
+		}
+		return ""
+	}
+	if normalized.Len() == 0 {
+		return ""
+	}
+	return normalized.String()
+}
+
+func displayFirstName(s string) string {
+	runes := []rune(strings.Trim(s, " \t,;:|()[]{}<>\"“”"))
+	if len(runes) == 0 {
+		return ""
+	}
+	allUpper := true
+	for _, r := range runes {
+		if unicode.IsLetter(r) && !unicode.IsUpper(r) {
+			allUpper = false
+			break
+		}
+	}
+	if !allUpper {
+		return string(runes)
+	}
+	for i, r := range runes {
+		if unicode.IsLetter(r) {
+			runes[i] = unicode.ToUpper(r)
+			break
+		}
+	}
+	for i, r := range runes {
+		if i > 0 {
+			runes[i] = unicode.ToLower(r)
+		}
+	}
+	return string(runes)
+}
 func bounded(t string) (string, bool) {
 	if len(t) <= 8000 {
 		return t, false
@@ -381,6 +484,8 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 			v.Filename = filepath.Base(h.Filename)
 			v.FullText = t
+			v.CandidateFirstName = firstNameFromCareerText(t)
+			v.WelcomeActive = false
 			v.Truncated = truncated
 			v.State = state
 			v.Progressive, v.ProgressiveShown, v.RevealedStrengths = nil, false, nil
@@ -405,6 +510,8 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 			state.Resume.Kind = "pasted_text"
 			v.FullText, v.Filename, v.InputKind, v.Truncated, v.State = t, "Pasted career text", "paste", truncated, state
+			v.CandidateFirstName = firstNameFromCareerText(t)
+			v.WelcomeActive = false
 			v.Progressive, v.ProgressiveShown, v.RevealedStrengths = nil, false, nil
 			v.Discoveries, v.Saved, v.Synthesis = nil, nil, nil
 			v.OriginalLeads = nil
@@ -419,6 +526,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				v.Voice = voice
 				if v.InputKind == "paste" && r.FormValue("approach") == "focused" {
 					v.Stage = "conversation"
+					v.WelcomeActive = true
 					s.next(r, v)
 					break
 				}
@@ -429,6 +537,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 					v.State.Leads = leads
 					v.OriginalLeads = append([]discovery.Lead(nil), leads...)
 					v.Stage = "leads"
+					v.WelcomeActive = true
 				}
 			}
 		case "/select":
@@ -440,6 +549,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				st, e := discovery.SelectLead(v.State, r.FormValue("lead"))
 				if e == nil {
 					v.State = st
+					v.WelcomeActive = false
 					v.SkipLead = ""
 					v.BoundaryPaused = false
 					v.Stage = "conversation"
@@ -463,6 +573,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 					}
 					v.State = st
 					v.Progressive = nil
+					v.WelcomeActive = false
 					if intent != "" {
 						v.EndRequested = intent == "end"
 						v.SkipLead = v.State.SelectedLeadID
@@ -709,6 +820,8 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 		case "/reset":
 			v.Voice = ""
+			v.CandidateFirstName = ""
+			v.WelcomeActive = false
 			v.EndRequested, v.SkipLead, v.BoundaryPaused = false, "", false
 			v.Filename = ""
 			v.FullText = ""

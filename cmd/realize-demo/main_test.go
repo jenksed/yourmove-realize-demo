@@ -16,6 +16,56 @@ import (
 	discovery "github.com/jenksed/yourmove-career-discovery"
 )
 
+func TestFirstNameFromCareerTextUsesCorroboratedHeaderOnly(t *testing.T) {
+	tests := []struct {
+		name, text, want string
+	}{
+		{"matching résumé header", "AVERY MORGAN\nTechnical Support\navery.morgan@example.com\nEXPERIENCE", "Avery"},
+		{"matching pasted header", "Alex Rivera\nProject manager\nalexrivera@gmail.com\nLed team projects", "Alex"},
+		{"employer at top", "Northline Hosting\nTechnical Support Specialist\ncontact@northlinehosting.com\nExperience", ""},
+		{"other person's email", "Alex Rivera\nOperations manager\nrecruiter@example.com\nExperience", ""},
+		{"no explicit person header", "Customer support and operations\nAlex Rivera managed tickets\nalexrivera@example.com", ""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := firstNameFromCareerText(tc.text); got != tc.want {
+				t.Fatalf("firstNameFromCareerText() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCandidateNamePresentationIsEscapedAndOutsideQuestion(t *testing.T) {
+	state, _ := discovery.New("Career summary with enough words to render a conversation page safely.")
+	state.Question = "What did you do next?"
+	name := `<img src=x onerror=alert(1)>`
+	var output bytes.Buffer
+	if err := page.Execute(&output, &session{Stage: "conversation", CandidateFirstName: name, WelcomeActive: true, State: state}); err != nil {
+		t.Fatal(err)
+	}
+	rendered := output.String()
+	if strings.Contains(rendered, name) || !strings.Contains(rendered, "&lt;img") {
+		t.Fatal("candidate name was not safely escaped")
+	}
+	if !strings.Contains(rendered, "Let’s explore your experience, &lt;img") {
+		t.Fatal("personal welcome was not rendered")
+	}
+	if !strings.Contains(rendered, "<p>What did you do next?</p>") || strings.Contains(rendered, "What did you do next?,") {
+		t.Fatal("candidate name was inserted into the question")
+	}
+}
+
+func TestCandidateWelcomeFallsBackToNeutralWording(t *testing.T) {
+	var output bytes.Buffer
+	if err := page.Execute(&output, &session{Stage: "leads", WelcomeActive: true}); err != nil {
+		t.Fatal(err)
+	}
+	rendered := output.String()
+	if !strings.Contains(rendered, "YOUR STORY</p>") || !strings.Contains(rendered, "Let’s explore your experience.") || strings.Contains(rendered, "experience, .") {
+		t.Fatal("missing or awkward neutral candidate welcome")
+	}
+}
+
 func TestFixtures(t *testing.T) {
 	for _, ext := range []string{"pdf", "docx"} {
 		t.Run(ext, func(t *testing.T) {
