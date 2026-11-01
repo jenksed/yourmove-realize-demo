@@ -113,7 +113,7 @@ img,svg{max-width:100%;height:auto}
 .composer{position:sticky;bottom:0;z-index:2;border-top:1px solid var(--line);padding-bottom:max(16px,env(safe-area-inset-bottom))}
 footer{margin-top:clamp(32px,5vh,64px)}
 @media(max-width:1100px){.conversation{grid-template-columns:minmax(0,1fr);gap:32px}}
-@media(max-width:700px){.composer{position:sticky;bottom:0}.question{font-size:clamp(21px,5.6vw,26px);line-height:1.4;padding-top:16px}.signal blockquote{font-size:20px}.signal h3{font-size:26px}.history{margin:16px 0 24px}}
+@media(max-width:700px){.composer{position:static}.question{font-size:clamp(21px,5.6vw,26px);line-height:1.4;padding-top:16px}.signal blockquote{font-size:20px}.signal h3{font-size:26px}.history{margin:16px 0 24px}}
 
 
 /* Outcome reading path */

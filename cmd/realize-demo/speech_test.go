@@ -106,6 +106,7 @@ func TestConversationQuestionPlaybackWiring(t *testing.T) {
 		`const startsInterview=new URL(form.action).pathname==='/begin'`,
 		`if(startsInterview&&!next.querySelector('.notice'))autoQuestionPlayback=true`,
 		`nextQuestion.textContent!==previousQuestion && autoQuestionPlayback`,
+		`@media(max-width:700px){.composer{position:static}`,
 		`questionAudioText`, `err.name==='NotAllowedError'`,
 	} {
 		if !strings.Contains(output.String(), want) {
