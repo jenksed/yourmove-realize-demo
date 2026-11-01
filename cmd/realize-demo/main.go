@@ -63,6 +63,9 @@ type session struct {
 	OriginalLeads                     []discovery.Lead
 	Challenge                         string
 	PreviousInterpretation            string
+	EndRequested                      bool
+	SkipLead                          string
+	BoundaryPaused                    bool
 }
 type server struct {
 	mu       sync.Mutex
@@ -332,9 +335,15 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 		case "/select":
 			if v.Stage == "leads" {
+				if v.SkipLead != "" && r.FormValue("lead") == v.SkipLead {
+					v.Notice = "Please choose a different experience."
+					break
+				}
 				st, e := discovery.SelectLead(v.State, r.FormValue("lead"))
 				if e == nil {
 					v.State = st
+					v.SkipLead = ""
+					v.BoundaryPaused = false
 					v.Stage = "conversation"
 					s.next(r, v)
 				} else {
@@ -343,13 +352,27 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 		case "/answer":
 			if v.Stage == "conversation" && v.State.Question != "" {
-				st, e := discovery.RecordAnswer(v.State, strings.TrimSpace(r.FormValue("answer")))
+				answer := strings.TrimSpace(r.FormValue("answer"))
+				intent := conversationIntent(answer)
+				pending := v.State.Proposal
+				pendingValid := v.State.ValidateProposal() == nil
+				st, e := discovery.RecordAnswer(v.State, answer)
 				if e != nil {
 					v.Notice = "Please enter an answer of up to 2,000 bytes."
 				} else {
+					if intent != "" && pendingValid {
+						st.Proposal = pending
+					}
 					v.State = st
 					v.Progressive = nil
-					s.next(r, v)
+					if intent != "" {
+						v.EndRequested = intent == "end"
+						v.SkipLead = v.State.SelectedLeadID
+						v.BoundaryPaused = true
+						v.Stage = "paused"
+					} else {
+						s.next(r, v)
+					}
 				}
 			}
 		case "/retry":
@@ -357,7 +380,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				s.next(r, v)
 			}
 		case "/reveal":
-			if v.Stage == "conversation" && v.State.ValidateProposal() == nil {
+			if (v.Stage == "conversation" || v.Stage == "paused") && v.State.ValidateProposal() == nil {
 				v.Stage = "reveal"
 			}
 		case "/review":
@@ -366,13 +389,26 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 		case "/continue":
 			if v.Stage == "reveal" || v.Stage == "review" {
-				v.Stage = "conversation"
+				if v.BoundaryPaused {
+					v.Stage = "paused"
+				} else {
+					v.Stage = "conversation"
+				}
 			}
 		case "/reject":
 			if v.Stage == "review" {
 				v.State.Proposal = nil
-				v.Stage = "conversation"
-				v.Notice = "The suggestion was not kept. You can continue the conversation."
+				if v.BoundaryPaused {
+					v.Stage = "paused"
+				} else {
+					v.Stage = "conversation"
+				}
+				v.Notice = "The suggestion was not kept."
+			}
+		case "/discard-pending":
+			if v.Stage == "paused" && v.State.ValidateProposal() == nil {
+				v.State.Proposal = nil
+				v.Notice = "The suggestion was not kept."
 			}
 		case "/keep":
 			if v.Stage == "review" && v.State.ValidateProposal() == nil {
@@ -454,6 +490,16 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 		case "/explore":
 			if len(v.Discoveries) < 4 && v.State.Resume.Text != "" {
+				if v.Stage == "paused" && v.State.ValidateProposal() == nil {
+					v.Notice = "Review or discard the pending discovery before choosing another experience."
+					break
+				}
+				if v.Stage == "paused" && len(v.OriginalLeads) == 0 && strings.TrimSpace(r.FormValue("focus")) == "" {
+					v.Notice = "Choose another experience to explore."
+					break
+				}
+				v.EndRequested = false
+				v.BoundaryPaused = false
 				resume := v.State.Resume
 				leads := v.OriginalLeads
 				v.State = discovery.State{Resume: resume, Leads: leads}
@@ -466,6 +512,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				if focus != "" {
+					v.SkipLead = ""
 					v.State.Leads = []discovery.Lead{{ID: "lead-1", Title: focus, Why: "The candidate chose this direction for further exploration."}}
 					v.State.SelectedLeadID = "lead-1"
 					v.Stage = "conversation"
@@ -549,6 +596,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				v.Stage = "takeaway"
 			}
 		case "/reset":
+			v.EndRequested, v.SkipLead, v.BoundaryPaused = false, "", false
 			v.Filename = ""
 			v.FullText = ""
 			v.Stage = "welcome"
@@ -620,6 +668,11 @@ func (s *server) next(r *http.Request, v *session) {
 		v.Notice = message(e)
 	} else {
 		v.State = st
+		if st.QuestionSuppressed {
+			v.SkipLead = st.SelectedLeadID
+			v.BoundaryPaused = true
+			v.Stage = "paused"
+		}
 		if !v.ProgressiveShown && st.Proposal != nil && st.ValidateProposal() == nil {
 			if label := discovery.StrengthLabel(st.Proposal.Strength); label != "" && !v.RevealedStrengths[st.Proposal.Strength] {
 				if v.RevealedStrengths == nil {
@@ -631,6 +684,23 @@ func (s *server) next(r *http.Request, v *session) {
 			}
 		}
 	}
+}
+
+// These are deliberately limited to unambiguous, standalone requests.
+// Mixed answers remain available to the normal interview policy.
+func conversationIntent(answer string) string {
+	s := strings.ToLower(strings.TrimSpace(answer))
+	s = strings.NewReplacer("’", "'", "?", "", "!", "", ".", "", ",", "").Replace(s)
+	s = strings.Join(strings.Fields(s), " ")
+	switch s {
+	case "i want to stop the interview", "i'm done", "i am done", "can we finish now", "let's finish", "stop the interview", "i want to end the interview":
+		return "end"
+	case "can we talk about something else", "i don't want to discuss that job", "i do not want to discuss that job", "i don't want to discuss this job", "let's move on", "lets move on", "move on", "can we move on", "i think we should leave it as a general practice", "i think we should leave it as a general practice i don't have a specific admission or further details to add":
+		return "topic"
+	case "no i honestly don't remember", "i don't remember", "i do not remember", "i can't remember", "i cannot remember", "i don't recall", "i do not recall", "i can't recall", "i cannot recall", "i can't recall a specific incident", "i cannot recall a specific incident", "i don't remember a specific incident", "i can't remember a specific incident", "i can't recall a specific example", "i don't remember a specific example":
+		return "topic"
+	}
+	return ""
 }
 
 //go:embed identity/*

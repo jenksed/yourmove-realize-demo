@@ -86,3 +86,21 @@ func TestInputBudgetsAndResponseLimit(t *testing.T) {
 		t.Fatal("unbounded interview")
 	}
 }
+
+func TestSuppressExactRepeatedQuestion(t *testing.T) {
+	s, _ := New("Customer service experience")
+	s.Question = "What did you personally do?"
+	s, _ = RecordAnswer(s, "I called the customer and explained the delay.")
+	next, err := Next(context.Background(), func(context.Context, string, string) (string, error) {
+		return `{"question":"What did you personally do?","proposal":null}`, nil
+	}, s)
+	if err != nil || !next.QuestionSuppressed || next.Question != "" {
+		t.Fatalf("repeated question not suppressed: %+v %v", next, err)
+	}
+	next, err = Next(context.Background(), func(context.Context, string, string) (string, error) {
+		return `{"question":"Why did you choose to call?","proposal":null}`, nil
+	}, s)
+	if err != nil || next.QuestionSuppressed || next.Question == "" {
+		t.Fatalf("distinct follow-up lost: %+v %v", next, err)
+	}
+}
