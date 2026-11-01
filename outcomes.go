@@ -35,6 +35,10 @@ type Outcomes struct {
 var outcomeStrengths = map[string]string{
 	"communication": "Communication", "follow_through": "Follow-through", "coordination": "Coordination", "collaboration": "Collaboration", "judgment": "Judgment", "problem_solving": "Problem solving", "troubleshooting": "Troubleshooting", "coaching": "Coaching", "organization": "Organization", "attention_to_detail": "Attention to detail", "learning": "Learning from experience", "adaptability": "Adaptability", "customer_service": "Customer service",
 }
+
+// StrengthLabel resolves a bounded model-selected concept for tentative presentation.
+func StrengthLabel(key string) string { return outcomeStrengths[key] }
+
 var outcomePossibilities = map[string]string{
 	"customer_service": "Customer service", "service_coordination": "Service coordination", "operations_coordination": "Operations coordination", "event_coordination": "Event coordination", "process_improvement": "Process improvement", "quality_checks": "Quality checks", "coaching": "Coaching others", "training": "Training", "team_coordination": "Team coordination", "planning": "Planning and organization", "communication": "Communication", "troubleshooting": "Troubleshooting",
 }

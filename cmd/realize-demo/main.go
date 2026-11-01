@@ -44,11 +44,16 @@ type evidence struct {
 	Revision         int64                `json:"revision"`
 	Responses        []discovery.Response `json:"responses"`
 }
+type progressiveReveal struct{ Strength, Quote string }
+
 type session struct {
 	mu                                sync.Mutex
 	Filename, FullText, Stage, Notice string
 	Truncated                         bool
 	State                             discovery.State
+	Progressive                       *progressiveReveal
+	ProgressiveShown                  bool
+	RevealedStrengths                 map[string]bool
 	Saved                             *evidence
 	Discoveries                       []evidence
 	Synthesis                         *discovery.ConnectionSynthesis
@@ -283,6 +288,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			v.FullText = t
 			v.Truncated = truncated
 			v.State = state
+			v.Progressive, v.ProgressiveShown, v.RevealedStrengths = nil, false, nil
 			v.Saved = nil
 			v.Discoveries = nil
 			v.Synthesis = nil
@@ -304,6 +310,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 			state.Resume.Kind = "pasted_text"
 			v.FullText, v.Filename, v.InputKind, v.Truncated, v.State = t, "Pasted career text", "paste", truncated, state
+			v.Progressive, v.ProgressiveShown, v.RevealedStrengths = nil, false, nil
 			v.Discoveries, v.Saved, v.Synthesis = nil, nil, nil
 			v.OriginalLeads = nil
 			v.Stage = "preview"
@@ -341,6 +348,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 					v.Notice = "Please enter an answer of up to 2,000 bytes."
 				} else {
 					v.State = st
+					v.Progressive = nil
 					s.next(r, v)
 				}
 			}
@@ -449,6 +457,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				resume := v.State.Resume
 				leads := v.OriginalLeads
 				v.State = discovery.State{Resume: resume, Leads: leads}
+				v.Progressive, v.ProgressiveShown = nil, false
 				v.Editing = 0
 				focus := strings.TrimSpace(r.FormValue("focus"))
 				if len(focus) > 120 {
@@ -546,6 +555,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			v.Notice = ""
 			v.Truncated = false
 			v.State = discovery.State{}
+			v.Progressive, v.ProgressiveShown, v.RevealedStrengths = nil, false, nil
 			v.Saved = nil
 			v.Discoveries = nil
 			v.Synthesis = nil
@@ -610,6 +620,16 @@ func (s *server) next(r *http.Request, v *session) {
 		v.Notice = message(e)
 	} else {
 		v.State = st
+		if !v.ProgressiveShown && st.Proposal != nil && st.ValidateProposal() == nil {
+			if label := discovery.StrengthLabel(st.Proposal.Strength); label != "" && !v.RevealedStrengths[st.Proposal.Strength] {
+				if v.RevealedStrengths == nil {
+					v.RevealedStrengths = make(map[string]bool)
+				}
+				v.RevealedStrengths[st.Proposal.Strength] = true
+				v.Progressive = &progressiveReveal{Strength: label, Quote: st.Proposal.Quote}
+				v.ProgressiveShown = true
+			}
+		}
 	}
 }
 

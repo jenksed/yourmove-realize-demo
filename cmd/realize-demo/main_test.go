@@ -366,3 +366,83 @@ func TestOutcomesFollowReviewAndInvalidateOnCorrection(t *testing.T) {
 		t.Fatal("correction retained stale outcomes")
 	}
 }
+
+func TestProgressiveDiscoveryConversation(t *testing.T) {
+	const statement = "I posted the wrong room number once because I relied on memory. Since then I read the layout sheet aloud with a second staff member before doors open."
+	calls := 0
+	s := &server{sessions: map[string]*session{}, generate: func(_ context.Context, _, policy string) (string, error) {
+		if policy == discovery.OutcomePolicy {
+			return `{"resume":[],"strengths":[{"evidence_id":1,"evidence_revision":1,"source_id":"response-2","quote":"Since then I read the layout sheet aloud with a second staff member before doors open.","title":"attention_to_detail","explanation":"","wording":""}],"possibilities":[]}`, nil
+		}
+		calls++
+		switch calls {
+		case 1:
+			return `{"question":"What happened?","proposal":null}`, nil
+		case 2:
+			return `{"question":"Could you share an example?","proposal":null}`, nil
+		default:
+			return `{"question":"What happened next?","proposal":{"title":"Checking details","strength":"attention_to_detail","experience":"Invented factual description","claim":"Invented factual claim","source_id":"response-2","quote":"Since then I read the layout sheet aloud with a second staff member before doors open.","unresolved":[]}}`, nil
+		}
+	}}
+	v := &session{Stage: "welcome"}
+	s.sessions["test"] = v
+	post := func(path string, values url.Values) string {
+		r := httptest.NewRequest("POST", path, strings.NewReader(values.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		r.Header.Set("X-Realize-Fragment", "1")
+		r.AddCookie(&http.Cookie{Name: "realize_session", Value: "test"})
+		w := httptest.NewRecorder()
+		s.serve(w, r)
+		return w.Body.String()
+	}
+	post("/paste", url.Values{"career_text": {"I help prepare rooms for events."}})
+	post("/begin", url.Values{"approach": {"focused"}})
+	body := post("/answer", url.Values{"answer": {"I don't remember."}})
+	if strings.Contains(body, "SOMETHING WORTH RECOGNIZING") {
+		t.Fatal("revealed without a proposal")
+	}
+	body = post("/answer", url.Values{"answer": {statement}})
+	for _, want := range []string{"SOMETHING WORTH RECOGNIZING", "Potential strength: Attention to detail", "Since then I read the layout sheet aloud with a second staff member before doors open.", "What happened next?", `action="/answer"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("missing %q", want)
+		}
+	}
+	if strings.Contains(body, "Invented factual") || len(v.Discoveries) != 0 {
+		t.Fatal("unreviewed factual claim or acceptance leaked")
+	}
+	body = post("/answer", url.Values{"answer": {"We checked the sheet together."}})
+	if strings.Contains(body, "SOMETHING WORTH RECOGNIZING") || !strings.Contains(body, "What happened next?") {
+		t.Fatal("repeat reveal or conversation stopped")
+	}
+	post("/reveal", nil)
+	post("/review", nil)
+	post("/keep", url.Values{"title": {"Checking details"}, "experience": {"Invented factual description"}, "claim": {"Invented factual claim"}})
+	if len(v.Discoveries) != 1 || v.Discoveries[0].Experience != statement {
+		t.Fatalf("reviewed grounding lost: %+v", v.Discoveries)
+	}
+	body = post("/takeaway", nil)
+	if !strings.Contains(body, "Attention to detail") || !strings.Contains(body, "Since then I read the layout sheet aloud") {
+		t.Fatal("takeaway missing grounded strength")
+	}
+}
+
+func TestProgressiveRequiresKnownStrengthAndAvoidsRepeats(t *testing.T) {
+	for _, tc := range []struct {
+		name, strength string
+		seen           bool
+	}{{"unknown", "invented_qualification", false}, {"already shown", "coaching", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			st, _ := discovery.New("Event work")
+			st.Question = "What did you do?"
+			st, _ = discovery.RecordAnswer(st, "I helped new coworkers learn their tasks.")
+			v := &session{State: st, RevealedStrengths: map[string]bool{"coaching": tc.seen}}
+			s := &server{generate: func(context.Context, string, string) (string, error) {
+				return `{"question":"What next?","proposal":{"title":"Coaching","strength":"` + tc.strength + `","experience":"helped coworkers","claim":"may show coaching","source_id":"response-1","quote":"I helped new coworkers learn their tasks.","unresolved":[]}}`, nil
+			}}
+			s.next(httptest.NewRequest("POST", "/answer", nil), v)
+			if v.Progressive != nil || v.State.Question != "What next?" {
+				t.Fatal("unexpected reveal or interruption")
+			}
+		})
+	}
+}
