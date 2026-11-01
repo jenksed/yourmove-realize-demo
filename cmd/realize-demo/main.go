@@ -599,7 +599,7 @@ func main() {
 	s := &server{sessions: map[string]*session{}, generate: generate}
 	http.Handle("/identity/", http.FileServer(http.FS(identity)))
 	http.HandleFunc("/", s.serve)
-	addr := "127.0.0.1:" + env("REALIZE_PORT", "8080")
+	addr := "0.0.0.0:" + env("PORT", env("REALIZE_PORT", "8080"))
 	log.Printf("YourMove Realize listening at http://%s", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
