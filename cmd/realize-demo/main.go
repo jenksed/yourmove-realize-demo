@@ -380,7 +380,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				s.next(r, v)
 			}
 		case "/reveal":
-			if (v.Stage == "conversation" || v.Stage == "paused") && v.State.ValidateProposal() == nil {
+			if (v.Stage == "conversation" || v.Stage == "paused" || v.Stage == "saved") && v.State.ValidateProposal() == nil {
 				v.Stage = "reveal"
 			}
 		case "/review":
@@ -475,6 +475,10 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 					break
 				}
 				v.Saved = &item
+				// The accepted wording now lives in Discoveries; the pending
+				// proposal is consumed so later navigation cannot mistake it
+				// for a decision awaiting review.
+				v.State.Proposal = nil
 				wasEditing := v.Editing != 0
 				v.Editing = 0
 				v.Synthesis = nil
@@ -490,7 +494,8 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 			}
 		case "/explore":
 			if len(v.Discoveries) < 4 && v.State.Resume.Text != "" {
-				if v.Stage == "paused" && v.State.ValidateProposal() == nil {
+				if v.State.ValidateProposal() == nil {
+					v.Stage = "paused"
 					v.Notice = "Review or discard the pending discovery before choosing another experience."
 					break
 				}
@@ -529,6 +534,11 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				v.Stage = "saved"
 			}
 		case "/edit":
+			if v.Editing == 0 && v.State.ValidateProposal() == nil && (v.Stage == "saved" || v.Stage == "paused") {
+				v.Stage = "paused"
+				v.Notice = "Review or discard the pending discovery before revising a saved one."
+				break
+			}
 			for _, item := range v.Discoveries {
 				if fmt.Sprint(item.ID) == r.FormValue("id") {
 					p := item.Proposal
@@ -580,7 +590,11 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				v.Stage = "connections"
 			}
 		case "/takeaway":
-			if len(v.Discoveries) > 0 {
+			if len(v.Discoveries) == 0 && v.EndRequested && v.State.ValidateProposal() != nil {
+				// Ended with nothing reviewed and nothing pending: reach the
+				// empty completion without further inference.
+				v.Stage = "takeaway"
+			} else if len(v.Discoveries) > 0 {
 				if v.Outcomes == nil {
 					var sources []discovery.OutcomeSource
 					for _, item := range v.Discoveries {
