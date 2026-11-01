@@ -137,16 +137,16 @@ body:has(.landing) main{max-width:none;padding:0}.landing{overflow:hidden}.landi
 body{background-image:none}
 .preview-stage,.leads-stage,.review-stage{max-width:850px}
 .preview-stage>h2,.leads-stage>h2,.review-stage>h2{font-weight:700;letter-spacing:-.035em;text-wrap:balance}
-.preview-stage .preview{background:var(--surface);border:1px solid var(--line);padding:clamp(20px,3vw,30px);line-height:1.65}
+.preview-stage .preview{background:var(--surface);border:1px solid var(--line);padding:clamp(20px,3vw,30px);font:inherit;font-size:16px;line-height:1.65}
 .preview-stage form.infer,.review-stage>form:first-of-type{background:var(--surface);border:1px solid var(--line);padding:clamp(20px,3vw,32px);margin:24px 0}
 .preview-stage .voice-choice select{width:min(100%,280px)}
 .leads-stage .lead{border-top:1px solid var(--line);padding:22px 8px;min-height:64px}.leads-stage .lead strong{font-weight:600}.leads-stage .lead span{line-height:1.5}
 .conversation .question{border-top:1px solid var(--line)}.conversation .composer{border-top:1px solid var(--line)}
 .signal,.insight{border:1px solid var(--line);border-top:3px solid var(--blue);border-radius:0;box-shadow:none}
-.source-anchor{border-top-color:var(--blue)}.review-anchor{border-left-color:var(--blue)}
+.source-anchor{border-top-color:var(--blue)}.review-anchor{border-left-color:var(--blue)}.discovery-map .discovery{padding:clamp(20px,3vw,32px)}.meaning summary strong{display:flex;justify-content:space-between;align-items:baseline;gap:8px}.meaning summary b{float:none;flex:none}
 .review-stage form label{margin-top:20px}.review-stage textarea{line-height:1.55}
 .outcome-section .record{border-top-color:var(--blue)}.outcome-finish{background:var(--wash);border-left-color:var(--blue)}
-@media(max-width:700px){.preview-stage form.infer,.review-stage>form:first-of-type{padding:20px}.leads-stage .lead{padding:18px 6px}.review-stage>h2{font-size:clamp(30px,8vw,40px)}}
+@media(max-width:700px){.preview-stage form.infer,.review-stage>form:first-of-type{padding:20px}.leads-stage .lead{padding:18px 6px}.review-stage>h2{font-size:clamp(30px,8vw,40px)}.review-stage .review-anchor{font-size:19px;line-height:1.5}}
 
 </style></head><body><header><div class="brand"><span class="lockup" role="img" aria-label="YourMove Realize"><img class="logo-light ym" src="/identity/yourmove-wordmark-navigation-light.png" alt="" aria-hidden="true" width="768" height="268"><img class="logo-dark ym" src="/identity/yourmove-wordmark-navigation-dark.png" alt="" aria-hidden="true" width="768" height="268"><svg class="realize" viewBox="0 0 168 32" aria-hidden="true" focusable="false"><text x="4" y="30" font-family="Jost,'Avenir Next','Segoe UI',sans-serif" font-size="32" font-weight="800" letter-spacing="-0.5" style="fill:var(--realize-green)">Realize</text><path d="M0 -8 L2 -2 L8 0 L2 2 L0 8 L-2 2 L-8 0 L-2 -2 Z" transform="translate(140,10)" style="fill:var(--realize-green)"/><path d="M0 -6 L1.5 -1.5 L6 0 L1.5 1.5 L0 6 L-1.5 1.5 L-6 0 L-1.5 -1.5 Z" transform="translate(154,18)" style="fill:var(--blue)"/></svg></span></div><nav class="brand-navigation" aria-label="Product navigation"><a href="https://www.yourmove.run/">About YourMove ↗</a><button class="theme no-print" id="theme" type="button">◐ &nbsp; Theme</button></nav></header><main id="app" tabindex="-1">
 {{if .Notice}}<div class="notice" role="alert">{{.Notice}}</div>{{end}}
@@ -271,8 +271,8 @@ document.addEventListener('submit',async e=>{
   const nextQuestion=next.querySelector('.question p');if(nextQuestion && nextQuestion.textContent!==previousQuestion && autoQuestionPlayback)playQuestion(next.querySelector('.speak-question'),true);
   if(answer){try{sessionStorage.removeItem('realize-draft')}catch(e){}}else restoreDraft(next);
   if(next.querySelector('.notice')){for(const [key,value] of data){const field=next.querySelector('[name="'+CSS.escape(key)+'"]');if(field && field.type!=='file' && typeof value==='string' && (field.tagName==='TEXTAREA'||field.type==='text'))field.value=value;}}
-  const focus=next.querySelector('#answer')||next.querySelector('[role="alert"]')||next.querySelector('.discovery-stage > h1, .discovery h2, .narrow > h2, .wide > h1, .wide > h2')||next.querySelector('h1, h2')||next;focus.setAttribute('tabindex',focus.getAttribute('tabindex')||'-1');focus.focus({preventScroll:true});
-  if(answer && nearBottom) ((!hadSignal&&next.querySelector('.signal'))||next.querySelector('.question')||focus).scrollIntoView({block:'start'}); else if(!answer) (next.querySelector('.discovery-stage > h1')||next.querySelector('.question')||next.querySelector('.discovery')?.parentElement||focus).scrollIntoView({block:'start'});
+  const focus=next.querySelector('[role="alert"]')||(!answer && next.querySelector('.candidate-welcome, .candidate-identity'))||(answer&&!hadSignal&&next.querySelector('.signal'))||next.querySelector('.question, .discovery-stage > h1, .discovery h2, .narrow > h2, .wide > h1, .wide > h2')||next.querySelector('h1, h2')||next;focus.setAttribute('tabindex',focus.getAttribute('tabindex')||'-1');focus.focus({preventScroll:true});
+  if(answer && nearBottom) ((!hadSignal&&next.querySelector('.signal'))||next.querySelector('.question')||focus).scrollIntoView({block:'start'}); else if(!answer) focus.scrollIntoView({block:'start'});
  }catch(err){
   document.querySelectorAll('#app button, #app input, #app textarea').forEach(el=>el.disabled=false);pending.remove();form.classList.remove('busy');
   const optimistic=document.querySelector('.optimistic');if(optimistic)optimistic.remove();if(answer)answer.value=draft;
