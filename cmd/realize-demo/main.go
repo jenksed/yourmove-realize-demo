@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -67,11 +68,57 @@ type session struct {
 	EndRequested                      bool
 	SkipLead                          string
 	BoundaryPaused                    bool
+	SpeechTTSCount                    int
+	SpeechSTTCount                    int
 }
 type server struct {
-	mu       sync.Mutex
-	sessions map[string]*session
-	generate discovery.Generate
+	mu             sync.Mutex
+	sessions       map[string]*session
+	generate       discovery.Generate
+	speechMu       sync.Mutex
+	speechTTSCount int
+	speechSTTCount int
+}
+
+func intEnv(k string, fallback int) int {
+	v, err := strconv.Atoi(strings.TrimSpace(os.Getenv(k)))
+	if err != nil || v < 0 {
+		return fallback
+	}
+	return v
+}
+
+func speechEnabled() bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("REALIZE_SPEECH_ENABLED"))) {
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return true
+	}
+}
+
+// reserveSpeech consumes an allowance before a metered provider call. Counters
+// intentionally live only in this process and reset on restart.
+func (s *server) reserveSpeech(v *session, tts bool) bool {
+	if !speechEnabled() {
+		return false
+	}
+	s.speechMu.Lock()
+	defer s.speechMu.Unlock()
+	if tts {
+		if v.SpeechTTSCount >= intEnv("REALIZE_TTS_SESSION_LIMIT", 12) || s.speechTTSCount >= intEnv("REALIZE_TTS_SERVER_LIMIT", 100) {
+			return false
+		}
+		v.SpeechTTSCount++
+		s.speechTTSCount++
+	} else {
+		if v.SpeechSTTCount >= intEnv("REALIZE_STT_SESSION_LIMIT", 5) || s.speechSTTCount >= intEnv("REALIZE_STT_SERVER_LIMIT", 50) {
+			return false
+		}
+		v.SpeechSTTCount++
+		s.speechSTTCount++
+	}
+	return true
 }
 
 func (s *server) get(w http.ResponseWriter, r *http.Request) *session {
@@ -251,7 +298,12 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	v := s.get(w, r)
 	v.mu.Lock()
-	defer v.mu.Unlock()
+	locked := true
+	defer func() {
+		if locked {
+			v.mu.Unlock()
+		}
+	}()
 	if r.Method == http.MethodPost {
 		if origin := r.Header.Get("Origin"); origin != "" && origin != "http://"+r.Host && origin != "https://"+r.Host {
 			http.Error(w, "Invalid origin", 403)
@@ -263,7 +315,18 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "No active question", http.StatusConflict)
 				return
 			}
-			speak(w, r, v.State.Question, v.Voice)
+			question, voice := v.State.Question, v.Voice
+			if !speechEnabled() {
+				http.Error(w, "Spoken questions are unavailable right now. You can read and answer the question.", http.StatusServiceUnavailable)
+				return
+			}
+			if !s.reserveSpeech(v, true) {
+				http.Error(w, "Spoken question limit reached. You can read and answer the question.", http.StatusTooManyRequests)
+				return
+			}
+			locked = false
+			v.mu.Unlock()
+			speak(w, r, question, voice)
 			return
 		}
 		switch r.URL.Path {
@@ -272,6 +335,16 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "No active question", http.StatusConflict)
 				return
 			}
+			if !speechEnabled() {
+				http.Error(w, "Transcription is unavailable right now. You can type your answer.", http.StatusServiceUnavailable)
+				return
+			}
+			if !s.reserveSpeech(v, false) {
+				http.Error(w, "Transcription limit reached. You can type your answer.", http.StatusTooManyRequests)
+				return
+			}
+			locked = false
+			v.mu.Unlock()
 			transcribe(w, r)
 			return
 		}

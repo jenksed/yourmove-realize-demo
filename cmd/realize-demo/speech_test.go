@@ -3,11 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	discovery "github.com/jenksed/yourmove-career-discovery"
 )
@@ -93,6 +95,189 @@ func TestQuestionSpeech(t *testing.T) {
 	speak(w, httptest.NewRequest("POST", "/speech/question", nil), "Current question?", "feminine")
 	if w.Code != 502 || strings.Contains(w.Body.String(), "private") {
 		t.Fatal("provider failure leaked or accepted")
+	}
+}
+
+func TestSpeechAllowancesAndKillSwitch(t *testing.T) {
+	t.Setenv("REALIZE_SPEECH_ENABLED", "true")
+	t.Setenv("REALIZE_STT_SESSION_LIMIT", "1")
+	t.Setenv("REALIZE_STT_SERVER_LIMIT", "2")
+	t.Setenv("REALIZE_TTS_SESSION_LIMIT", "1")
+	t.Setenv("REALIZE_TTS_SERVER_LIMIT", "2")
+	s := &server{}
+	a, b := &session{}, &session{}
+	if !s.reserveSpeech(a, false) || s.reserveSpeech(a, false) {
+		t.Fatal("session transcription allowance not enforced")
+	}
+	if !s.reserveSpeech(b, false) || s.reserveSpeech(&session{}, false) {
+		t.Fatal("server transcription allowance not enforced")
+	}
+	if !s.reserveSpeech(a, true) || s.reserveSpeech(a, true) {
+		t.Fatal("session TTS allowance not enforced")
+	}
+	if !s.reserveSpeech(b, true) || s.reserveSpeech(&session{}, true) {
+		t.Fatal("server TTS allowance not enforced")
+	}
+	t.Setenv("REALIZE_SPEECH_ENABLED", "off")
+	if s.reserveSpeech(&session{}, true) {
+		t.Fatal("kill switch allowed provider request")
+	}
+}
+
+func TestSpeechRoutesReleaseSessionLockDuringProviderCall(t *testing.T) {
+	t.Setenv("REALIZE_SPEECH_ENABLED", "true")
+	t.Setenv("FISH_AUDIO_API_KEY", "test-key")
+	t.Setenv("REALIZE_TTS_SESSION_LIMIT", "1")
+	entered, release := make(chan struct{}), make(chan struct{})
+	old := speechTransport
+	defer func() { speechTransport = old }()
+	speechTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		body, _ := io.ReadAll(r.Body)
+		if !bytes.Contains(body, []byte("authorized old question")) {
+			t.Error("provider received a question outside the locked snapshot")
+		}
+		close(entered)
+		<-release
+		return providerResponse(200, "audio/mpeg", "audio"), nil
+	})
+	state, _ := discovery.New("Resume material long enough for interview")
+	state.Question = "authorized old question"
+	v := &session{Stage: "conversation", State: state, Voice: "feminine"}
+	s := &server{sessions: map[string]*session{"session": v}}
+	r := httptest.NewRequest("POST", "/speech/question", nil)
+	r.AddCookie(&http.Cookie{Name: "realize_session", Value: "session"})
+	w := httptest.NewRecorder()
+	done := make(chan struct{})
+	go func() { s.serve(w, r); close(done) }()
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("provider was not called")
+	}
+	changed := make(chan struct{})
+	go func() { v.mu.Lock(); v.State.Question = "new question"; v.mu.Unlock(); close(changed) }()
+	select {
+	case <-changed:
+	case <-time.After(time.Second):
+		t.Fatal("session lock remained held during provider I/O")
+	}
+	close(release)
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("speech handler did not finish")
+	}
+	if w.Code != 200 || w.Body.String() != "audio" || v.State.Question != "new question" {
+		t.Fatal("provider response disrupted the changed session")
+	}
+}
+
+func TestSpeechRouteLimitsAndDisabledLeaveTextAvailable(t *testing.T) {
+	t.Setenv("REALIZE_SPEECH_ENABLED", "false")
+	state, _ := discovery.New("Resume material long enough for interview")
+	state.Question = "What happened?"
+	v := &session{Stage: "conversation", State: state}
+	s := &server{sessions: map[string]*session{"s": v}}
+	for _, path := range []string{"/speech/question", "/speech/transcribe"} {
+		r := httptest.NewRequest("POST", path, strings.NewReader("audio"))
+		r.Header.Set("Content-Type", "audio/webm")
+		r.AddCookie(&http.Cookie{Name: "realize_session", Value: "s"})
+		w := httptest.NewRecorder()
+		s.serve(w, r)
+		if w.Code != http.StatusServiceUnavailable || strings.Contains(w.Body.String(), "API_KEY") {
+			t.Fatalf("%s: status %d body %q", path, w.Code, w.Body.String())
+		}
+	}
+	if v.State.Question != "What happened?" {
+		t.Fatal("disabled speech changed interview state")
+	}
+}
+
+func TestSpeechEndpointSessionAndServerLimits(t *testing.T) {
+	t.Setenv("REALIZE_SPEECH_ENABLED", "true")
+	t.Setenv("FISH_AUDIO_API_KEY", "test-key")
+	t.Setenv("DEEPGRAM_API_KEY", "test-key")
+	t.Setenv("REALIZE_TTS_SESSION_LIMIT", "1")
+	t.Setenv("REALIZE_TTS_SERVER_LIMIT", "1")
+	t.Setenv("REALIZE_STT_SESSION_LIMIT", "1")
+	t.Setenv("REALIZE_STT_SERVER_LIMIT", "1")
+	old := speechTransport
+	defer func() { speechTransport = old }()
+	speechTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Host, "fish.audio") {
+			return providerResponse(200, "audio/mpeg", "audio"), nil
+		}
+		return providerResponse(200, "application/json", `{"results":{"channels":[{"alternatives":[{"transcript":"heard words"}]}]}}`), nil
+	})
+	state, _ := discovery.New("Resume material long enough for interview")
+	state.Question = "What happened?"
+	s := &server{sessions: map[string]*session{
+		"one": {Stage: "conversation", State: state},
+		"two": {Stage: "conversation", State: state},
+	}}
+	request := func(path, cookie, contentType string) int {
+		r := httptest.NewRequest("POST", path, strings.NewReader("recording"))
+		r.Header.Set("Content-Type", contentType)
+		r.AddCookie(&http.Cookie{Name: "realize_session", Value: cookie})
+		w := httptest.NewRecorder()
+		s.serve(w, r)
+		return w.Code
+	}
+	if got := request("/speech/question", "one", "application/octet-stream"); got != http.StatusOK {
+		t.Fatalf("first TTS request: %d", got)
+	}
+	if got := request("/speech/question", "one", "application/octet-stream"); got != http.StatusTooManyRequests {
+		t.Fatalf("session TTS limit: %d", got)
+	}
+	if got := request("/speech/question", "two", "application/octet-stream"); got != http.StatusTooManyRequests {
+		t.Fatalf("server TTS limit: %d", got)
+	}
+	if got := request("/speech/transcribe", "one", "audio/webm"); got != http.StatusOK {
+		t.Fatalf("first STT request: %d", got)
+	}
+	if got := request("/speech/transcribe", "one", "audio/webm"); got != http.StatusTooManyRequests {
+		t.Fatalf("session STT limit: %d", got)
+	}
+	if got := request("/speech/transcribe", "two", "audio/webm"); got != http.StatusTooManyRequests {
+		t.Fatalf("server STT limit: %d", got)
+	}
+}
+
+func TestQuestionRouteUsesSessionVoiceReference(t *testing.T) {
+	t.Setenv("REALIZE_SPEECH_ENABLED", "true")
+	t.Setenv("FISH_AUDIO_API_KEY", "test-key")
+	t.Setenv("FISH_AUDIO_VOICE_ID", "laura-reference")
+	t.Setenv("FISH_AUDIO_MASCULINE_VOICE_ID", "adrian-reference")
+	old := speechTransport
+	defer func() { speechTransport = old }()
+	var references []string
+	speechTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		var payload struct {
+			Reference string `json:"reference_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Error(err)
+		}
+		references = append(references, payload.Reference)
+		return providerResponse(200, "audio/mpeg", "audio"), nil
+	})
+	state, _ := discovery.New("Resume material long enough for interview")
+	state.Question = "What happened?"
+	s := &server{sessions: map[string]*session{
+		"laura":  {Stage: "conversation", State: state, Voice: "feminine"},
+		"adrian": {Stage: "conversation", State: state, Voice: "masculine"},
+	}}
+	for _, tc := range []struct{ cookie, want string }{{"laura", "laura-reference"}, {"adrian", "adrian-reference"}} {
+		r := httptest.NewRequest("POST", "/speech/question", nil)
+		r.AddCookie(&http.Cookie{Name: "realize_session", Value: tc.cookie})
+		w := httptest.NewRecorder()
+		s.serve(w, r)
+		if w.Code != http.StatusOK {
+			t.Fatalf("%s route status: %d", tc.cookie, w.Code)
+		}
+		if references[len(references)-1] != tc.want {
+			t.Fatalf("%s selected %q, want %q", tc.cookie, references[len(references)-1], tc.want)
+		}
 	}
 }
 
