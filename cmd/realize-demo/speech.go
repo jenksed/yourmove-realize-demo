@@ -17,6 +17,58 @@ import (
 
 var speechTransport http.RoundTripper = http.DefaultTransport
 
+func deepgramKey() string { return strings.TrimSpace(os.Getenv("DEEPGRAM_API_KEY")) }
+
+func deepgramAuthorize(req *http.Request, key string) {
+	req.Header.Set("Authorization", "Token "+key)
+}
+
+func deepgramClient() http.Client {
+	return http.Client{Transport: speechTransport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+}
+
+// deepgramAuthDiagnostic runs only when explicitly enabled for a restart.
+func deepgramAuthDiagnostic() {
+	if os.Getenv("DEEPGRAM_AUTH_DIAGNOSTIC") != "1" {
+		return
+	}
+	key := deepgramKey()
+	quoted := len(key) >= 2 && ((key[0] == '"' && key[len(key)-1] == '"') || (key[0] == '\'' && key[len(key)-1] == '\''))
+	unquoted := key
+	if quoted {
+		unquoted = strings.TrimSpace(key[1 : len(key)-1])
+	}
+	lower := strings.ToLower(unquoted)
+	prefixed := strings.HasPrefix(lower, "token ") || strings.HasPrefix(lower, "bearer ")
+	status, code := 0, ""
+	if key != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.deepgram.com/v1/auth/token", nil)
+		if err == nil {
+			deepgramAuthorize(req, key)
+			client := deepgramClient()
+			resp, err := client.Do(req)
+			if err == nil {
+				status = resp.StatusCode
+				if status != http.StatusOK {
+					var body struct {
+						ErrCode string `json:"err_code"`
+					}
+					_ = json.NewDecoder(io.LimitReader(resp.Body, 4096)).Decode(&body)
+					// Allow only known error codes; upstream data may contain secrets.
+					switch body.ErrCode {
+					case "INVALID_AUTH", "INSUFFICIENT_PERMISSIONS", "FORBIDDEN":
+						code = body.ErrCode
+					}
+				}
+				resp.Body.Close()
+			}
+		}
+	}
+	log.Printf("deepgram_auth_diagnostic status=%d err_code=%q key_present=%t surrounding_quotes=%t embedded_prefix=%t", status, code, key != "", quoted, prefixed)
+}
+
 func speechRequestID() string {
 	b := make([]byte, 8)
 	if _, err := rand.Read(b); err != nil {
@@ -69,7 +121,7 @@ func transcribe(w http.ResponseWriter, r *http.Request) {
 		transcriptionError(w, requestID, http.StatusRequestEntityTooLarge, "recording_too_large", "This recording is too large. Make a shorter recording or type your answer.")
 		return
 	}
-	key := strings.TrimSpace(os.Getenv("DEEPGRAM_API_KEY"))
+	key := deepgramKey()
 	if key == "" {
 		finish("provider_not_configured", http.StatusServiceUnavailable, 0, len(audio))
 		transcriptionError(w, requestID, http.StatusServiceUnavailable, "speech_unavailable", "Transcription is unavailable right now. You can type your answer.")
@@ -83,13 +135,13 @@ func transcribe(w http.ResponseWriter, r *http.Request) {
 		transcriptionError(w, requestID, http.StatusBadGateway, "speech_unavailable", "Transcription is unavailable right now. You can type your answer.")
 		return
 	}
-	req.Header.Set("Authorization", "Token "+key)
+	deepgramAuthorize(req, key)
 	upstreamMedia := media
 	if media == "audio/m4a" || media == "audio/x-m4a" {
 		upstreamMedia = "audio/mp4"
 	}
 	req.Header.Set("Content-Type", upstreamMedia)
-	client := http.Client{Transport: speechTransport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := deepgramClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		finish("provider_network_error", http.StatusBadGateway, 0, len(audio))

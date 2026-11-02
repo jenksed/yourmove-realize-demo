@@ -934,6 +934,7 @@ var identity embed.FS
 
 func main() {
 	loadEnv(".env")
+	deepgramAuthDiagnostic()
 	s := &server{sessions: map[string]*session{}, generate: generate}
 	http.Handle("/identity/", http.FileServer(http.FS(identity)))
 	http.HandleFunc("/", s.serve)

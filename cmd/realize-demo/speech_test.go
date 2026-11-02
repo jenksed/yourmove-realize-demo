@@ -496,3 +496,45 @@ func TestTranscriptionAuthFailureLogsSanitizedDiagnostics(t *testing.T) {
 		t.Fatal("sensitive diagnostic leaked")
 	}
 }
+
+func TestDeepgramAuthDiagnostic(t *testing.T) {
+	oldTransport, oldOutput := speechTransport, log.Writer()
+	defer func() { speechTransport = oldTransport; log.SetOutput(oldOutput) }()
+	for _, tc := range []struct {
+		name, flag, key, body, want string
+		status                      int
+		request                     bool
+	}{
+		{"disabled", "", "sentinel-secret", "", "", 0, false},
+		{"missing", "1", "  ", "", `status=0 err_code="" key_present=false surrounding_quotes=false embedded_prefix=false`, 0, false},
+		{"accepted", "1", "  sentinel-secret  ", `{"secret":"sentinel-secret"}`, `status=200 err_code="" key_present=true surrounding_quotes=false embedded_prefix=false`, 200, true},
+		{"rejected", "1", `"Bearer sentinel-secret"`, `{"err_code":"INVALID_AUTH","err_msg":"sentinel-secret"}`, `status=401 err_code="INVALID_AUTH" key_present=true surrounding_quotes=true embedded_prefix=true`, 401, true},
+		{"untrusted code", "1", "Token sentinel-secret", `{"err_code":"sentinel-secret"}`, `status=403 err_code="" key_present=true surrounding_quotes=false embedded_prefix=true`, 403, true},
+		{"network", "1", "sentinel-secret", "", `status=0 err_code="" key_present=true surrounding_quotes=false embedded_prefix=false`, 0, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("DEEPGRAM_AUTH_DIAGNOSTIC", tc.flag)
+			t.Setenv("DEEPGRAM_API_KEY", tc.key)
+			var logs bytes.Buffer
+			log.SetOutput(&logs)
+			called := false
+			speechTransport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+				called = true
+				if r.Method != http.MethodGet || r.URL.String() != "https://api.deepgram.com/v1/auth/token" || r.Header.Get("Authorization") != "Token "+strings.TrimSpace(tc.key) {
+					t.Error("unexpected diagnostic request")
+				}
+				if tc.status == 0 {
+					return nil, io.ErrUnexpectedEOF
+				}
+				return providerResponse(tc.status, "application/json", tc.body), nil
+			})
+			deepgramAuthDiagnostic()
+			if called != tc.request || !strings.Contains(logs.String(), tc.want) || strings.Contains(logs.String(), "sentinel-secret") {
+				t.Errorf("unexpected request or sanitized log: called=%t log=%q", called, logs.String())
+			}
+			if tc.flag == "" && logs.Len() != 0 {
+				t.Error("disabled diagnostic logged output")
+			}
+		})
+	}
+}
