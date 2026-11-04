@@ -297,7 +297,7 @@ func TestFragmentAnswerPreservesRecordedResponseOnInferenceFailure(t *testing.T)
 
 func TestWorkstreamCPresentation(t *testing.T) {
 	mkProposal := func() discovery.Proposal {
-		return discovery.Proposal{Title: "Diagnosis", Experience: "I investigated the outage and handed findings to engineering.", Claim: "Careful diagnostic work under pressure.", SourceID: "response-1", Quote: "I diagnosed the issue", Supports: []discovery.ProposalSupport{{SourceID: "response-2", Quote: "I handed my findings to engineering"}}, Unresolved: []string{"Outcome unknown"}}
+		return discovery.Proposal{Title: "Diagnosis", Headline: "Steady triage", Experience: "I investigated the outage and handed findings to engineering.", Claim: "Careful diagnostic work under pressure.", SourceID: "response-1", Quote: "I diagnosed the issue", Supports: []discovery.ProposalSupport{{SourceID: "response-2", Quote: "I handed my findings to engineering"}}, Unresolved: []string{"Outcome unknown"}}
 	}
 	mkState := func(p discovery.Proposal) discovery.State {
 		st, _ := discovery.New("A useful resume excerpt about troubleshooting.")
@@ -318,7 +318,7 @@ func TestWorkstreamCPresentation(t *testing.T) {
 	p := mkProposal()
 	st := mkState(p)
 	got := render(&session{Stage: "reveal", State: st})
-	for _, want := range []string{"02 / THE ACTIONS REALIZE SEES", "03 / WHAT THIS MAY DEMONSTRATE", "Why Realize thinks so", "What remains open", "01 / YOUR WORDS", "AI interpretation · awaiting your review. A matching quotation does not prove this conclusion.", "response-2", "supporting this interpretation"} {
+	for _, want := range []string{"YOU SAID", "inspect the evidence", "Why Realize thinks so", "What remains open", "your exact words", "Your words support a possibility, not a proven conclusion.", "response-2", "exact supporting statement", "YOU WOULD KEEP", "Careful diagnostic work under pressure."} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("reveal missing %q", want)
 		}

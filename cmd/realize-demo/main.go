@@ -620,7 +620,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 				v.Notice = "The suggestion was not kept."
 			}
 		case "/keep":
-			if v.Stage == "review" && v.State.ValidateProposal() == nil {
+			if (v.Stage == "review" || v.Stage == "reveal") && v.State.ValidateProposal() == nil {
 				p := *v.State.Proposal
 				correction := strings.TrimSpace(r.FormValue("correction"))
 				if len(correction) > 2000 {
