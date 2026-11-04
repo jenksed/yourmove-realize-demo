@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="cmd/realize-demo/identity/yourmove-realize-horizontal-dark.svg">
-    <img src="cmd/realize-demo/identity/yourmove-realize-horizontal-light.svg" alt="YourMove Realize" width="470">
-  </picture>
+  <img src="assets/yourmove-realize-lockup.webp" alt="YourMove Realize" width="850">
 </p>
 
 <h1 align="center">You've done more than your résumé shows.</h1>
