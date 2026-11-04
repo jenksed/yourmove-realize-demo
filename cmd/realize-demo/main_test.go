@@ -268,7 +268,7 @@ func TestWorkstreamCPresentation(t *testing.T) {
 	p := mkProposal()
 	st := mkState(p)
 	got := render(&session{Stage: "reveal", State: st})
-	for _, want := range []string{"02 / THE ACTIONS REALIZE SEES", "03 / WHAT THIS MAY DEMONSTRATE", "Why Realize thinks so", "What remains open", "01 / YOUR WORDS", "AI interpretation · awaiting your review. A matching quotation does not prove this conclusion.", "response-2", "supporting this interpretation"} {
+	for _, want := range []string{"WHAT REALIZE SEES YOU DOING", "inspect the evidence", "Why Realize thinks so", "What remains open", "your exact words", "A matching quotation does not prove this conclusion.", "response-2", "exact supporting statement"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("reveal missing %q", want)
 		}
