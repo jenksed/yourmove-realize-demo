@@ -353,6 +353,7 @@ func TestQuestionRouteUsesSessionVoiceReference(t *testing.T) {
 	t.Setenv("FISH_AUDIO_API_KEY", "test-key")
 	t.Setenv("FISH_AUDIO_VOICE_ID", "laura-reference")
 	t.Setenv("FISH_AUDIO_MASCULINE_VOICE_ID", "adrian-reference")
+	t.Setenv("FISH_AUDIO_HANNAH_VOICE_ID", "hannah-reference")
 	old := speechTransport
 	defer func() { speechTransport = old }()
 	var references []string
@@ -371,8 +372,9 @@ func TestQuestionRouteUsesSessionVoiceReference(t *testing.T) {
 	s := &server{sessions: map[string]*session{
 		"laura":  {Stage: "conversation", State: state, Voice: "feminine"},
 		"adrian": {Stage: "conversation", State: state, Voice: "masculine"},
+		"hannah": {Stage: "conversation", State: state, Voice: "hannah"},
 	}}
-	for _, tc := range []struct{ cookie, want string }{{"laura", "laura-reference"}, {"adrian", "adrian-reference"}} {
+	for _, tc := range []struct{ cookie, want string }{{"laura", "laura-reference"}, {"adrian", "adrian-reference"}, {"hannah", "hannah-reference"}} {
 		r := httptest.NewRequest("POST", "/speech/question", nil)
 		r.AddCookie(&http.Cookie{Name: "realize_session", Value: tc.cookie})
 		w := httptest.NewRecorder()
@@ -418,6 +420,7 @@ func TestVoiceSelectionRoute(t *testing.T) {
 	t.Setenv("FISH_AUDIO_API_KEY", "test-key")
 	t.Setenv("FISH_AUDIO_VOICE_ID", "")
 	t.Setenv("FISH_AUDIO_MASCULINE_VOICE_ID", "")
+	t.Setenv("FISH_AUDIO_HANNAH_VOICE_ID", "")
 	old := speechTransport
 	defer func() { speechTransport = old }()
 	var got string
@@ -430,6 +433,7 @@ func TestVoiceSelectionRoute(t *testing.T) {
 		{"", "e3cd384158934cc9a01029cd7d278634"},
 		{"feminine", "e3cd384158934cc9a01029cd7d278634"},
 		{"masculine", "bf322df2096a46f18c579d0baa36f41d"},
+		{"hannah", "9a9cf47702da476aa4629e2506d4a857"},
 	} {
 		st, _ := discovery.New("I helped customers solve problems at work.")
 		v := &session{Stage: "preview", InputKind: "paste", State: st}

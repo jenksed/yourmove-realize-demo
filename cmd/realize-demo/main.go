@@ -519,7 +519,7 @@ func (s *server) serve(w http.ResponseWriter, r *http.Request) {
 		case "/begin":
 			if v.Stage == "preview" {
 				voice := r.FormValue("voice")
-				if voice != "" && voice != "feminine" && voice != "masculine" {
+				if voice != "" && voice != "feminine" && voice != "masculine" && voice != "hannah" {
 					v.Notice = "Please choose an interviewer voice."
 					break
 				}
@@ -958,4 +958,4 @@ func quoteExcerpt(s string) string {
 	return string(r[:end])
 }
 
-var page = template.Must(template.New("page").Funcs(template.FuncMap{"quoteExcerpt": quoteExcerpt, "longQuote": func(s string) bool { return len([]rune(s)) > 160 }}).Parse(pageHTML))
+var page = template.Must(template.New("page").Funcs(template.FuncMap{"strengthLabel": discovery.StrengthLabel, "quoteExcerpt": quoteExcerpt, "longQuote": func(s string) bool { return len([]rune(s)) > 160 }}).Parse(pageHTML))
