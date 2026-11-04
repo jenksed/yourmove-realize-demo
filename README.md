@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/yourmove-realize-lockup.webp" alt="YourMove Realize" width="850">
+  <img src="assets/yourmove-realize-submission.webp" alt="YourMove Realize" width="850">
 </p>
 
 <h1 align="center">You've done more than your résumé shows.</h1>
@@ -12,13 +12,23 @@
 
 <p align="center">
   <a href="https://realize.yourmove.run/">Try the live demo</a> ·
-  <a href="#see-what-a-conversation-can-uncover">See the idea</a> ·
+  <a href="#judge-walkthrough">Judge walkthrough</a> ·
   <a href="#run-it-locally">Run it locally</a>
 </p>
 
 <p align="center"><sub>Meta Global AI Developer Hackathon 2026 · Indie Developer · Build for Your World</sub></p>
 
 ---
+
+## Judge walkthrough
+
+**Try the [live demo](https://realize.yourmove.run/).** No account is required. You can paste a short description of an experience or download and upload the fictional [Avery Morgan résumé (PDF)](realize-demo-pack/fixtures/avery-morgan-resume.pdf) ([DOCX](realize-demo-pack/fixtures/avery-morgan-resume.docx)).
+
+1. **Explore:** Review the source material, select an experience, and answer the interviewer's follow-up questions.
+2. **Inspect:** When Realize suggests a possible discovery, examine the verbatim quotes behind it and what remains unconfirmed.
+3. **Decide:** Correct, keep, or reject the interpretation. Explore another experience to see possible connections, then review or export the takeaway.
+
+The experience is designed to surface possibilities for **candidate review**, not to verify employment claims or assign a score.
 
 ## The problem isn't always a missing qualification
 
@@ -61,6 +71,8 @@ That question became Realize.
 It is **not** my preexisting open-source [YourMove job-application tool](https://github.com/jenksed/yourmove-go). That project helps people prepare and work through job applications while retaining control over submission. Realize is a different application, in its own repository, with its own runtime and a different purpose: helping someone uncover the value of their experience through conversation.
 
 They share a belief that AI should assist people's judgment rather than replace it. **Building Realize did not require copying or running the existing job-application app.** Historical integration experiments are retained under [integration/](integration/README.md) for context; they are not needed to run or judge this standalone demo.
+
+The discovery engine is included at the root of this public repository. Its `go.mod` retains the original development module path `github.com/jenksed/yourmove-career-discovery`; Go resolves those imports to the local source. No access to the separate development repository is required to build or run the demo.
 
 ## How Realize works
 
