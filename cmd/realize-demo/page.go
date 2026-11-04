@@ -270,7 +270,7 @@ form.busy{opacity:.92}
 .connection-source{font-size:15px}
 .connection-exp blockquote{display:block;overflow:visible}
 .connection-why{margin-top:0;max-width:none;border-radius:0 0 20px 20px;border-top:2px solid var(--green)}
-.connection-why:before{display:none}.connection-why h1{max-width:32ch;font-size:34px}.connection-why details{margin-top:18px}.connection-why summary{cursor:pointer}
+.connection-why:before{display:none}.connection-why h1{max-width:32ch;font-size:34px}.connection-why details{margin-top:18px}.connection-why summary{cursor:pointer}.connection-why .eyebrow{background:transparent;color:inherit;border-color:currentColor}
 .outcome-hero.personal{padding:28px 32px}.outcome-hero.personal h1{font-size:32px;max-width:26ch}.outcome-hero.personal .lede{font-size:17px;max-width:65ch}
 .kept-first{display:grid;grid-template-columns:1fr 1fr;gap:20px}.kept-first>h2,.kept-first>p,.kept-first>.kept-connection{grid-column:1/-1;margin:0}.kept-first .kept-card{margin:0;border-radius:0;border:0;border-top:2px solid var(--green);padding:20px 0;background:transparent}.kept-first .kept-claim{display:block;overflow:visible;font-size:17px}.kept-card h3{font-size:23px}.kept-card details{margin-top:16px}
 @media(max-width:700px){.recognition-bridge{grid-template-columns:1fr;gap:18px}.recognition-source{border:0;border-bottom:1px solid var(--panel-mute);padding:0 0 18px}.recognition-quote blockquote{font-size:19px}.recognition-headline{font-size:28px}.recognition-context{font-size:16px}.connection-pair{gap:20px}.connection-exp .connection-action{font-size:16px}.connection-why h1{font-size:28px}.kept-first{display:block}.outcome-hero.personal{padding:24px}.kept-first .kept-card{margin-top:24px}}
