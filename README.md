@@ -93,7 +93,7 @@ Those checks can prove that a quote came from a recorded answer. They **cannot**
 
 ## Architecture
 
-\`\`\`mermaid
+```mermaid
 flowchart TD
     A["PDF / DOCX / pasted career text"] --> B["Local extraction and candidate preview"]
     B --> C["Candidate starts discovery"]
@@ -106,7 +106,7 @@ flowchart TD
     H --> I["Possible cross-experience connections"]
     H --> J["Candidate takeaway / JSON export"]
     I --> J
-\`\`\`
+```
 
 The application is a standalone Go web service with an in-memory session model and a server-rendered interface. The discovery engine and its validation logic live in the same repository, not in a hosted black box.
 
@@ -121,26 +121,26 @@ The application is a standalone Go web service with an in-memory session model a
 
 ## Run it locally
 
-Requires **Go 1.27.2+** and Poppler's \`pdftotext\` command on your \`PATH\`. On macOS, install Poppler with \`brew install poppler\`.
+Requires **Go 1.27.2+** and Poppler's `pdftotext` command on your `PATH`. On macOS, install Poppler with `brew install poppler`.
 
-\`\`\`bash
+```bash
 git clone https://github.com/jenksed/yourmove-realize-demo.git
 cd yourmove-realize-demo
-\`\`\`
+```
 
-Create a local \`.env\` file with a Baseten API key authorized for the configured model:
+Create a local `.env` file with a Baseten API key authorized for the configured model:
 
-\`\`\`dotenv
+```dotenv
 BASETEN_API_KEY=your-key-here
 BASETEN_MODEL=meta-models/muse-spark-open-1026
-\`\`\`
+```
 
 The model identifier above is the restricted hackathon model used in development. Use an accessible Muse Spark Open model identifier for your own Baseten account if needed. The service does not silently switch providers or models.
 
-\`\`\`bash
+```bash
 go test -count=1 ./...
 go run ./cmd/realize-demo
-\`\`\`
+```
 
 Open **http://localhost:8080**. To exercise both upload paths, try the fictional [Avery Morgan PDF](realize-demo-pack/fixtures/avery-morgan-resume.pdf) or [DOCX](realize-demo-pack/fixtures/avery-morgan-resume.docx). You can also paste a short description of your own work.
 
@@ -157,7 +157,7 @@ Deepgram and Fish Audio keys are optional for a text-only experience. See [full 
 
 ## Verification and project history
 
-\`go test -count=1 ./...\` runs the repository's focused engine and web-route tests, including source validation, correction flows, conversation continuity, file handling, and optional speech failures. Real-model behavior must also be evaluated through the running application; passing tests alone do not demonstrate that a discovery is useful to a person.
+`go test -count=1 ./...` runs the repository's focused engine and web-route tests, including source validation, correction flows, conversation continuity, file handling, and optional speech failures. Real-model behavior must also be evaluated through the running application; passing tests alone do not demonstrate that a discovery is useful to a person.
 
 The [historical execution notes](docs/EXECUTION.md) and [evaluation artifacts](benchmarks/) record earlier experiments. They are not a substitute for results from the final submitted revision.
 
