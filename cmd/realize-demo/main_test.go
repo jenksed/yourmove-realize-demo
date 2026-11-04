@@ -450,11 +450,11 @@ func TestProgressiveDiscoveryConversation(t *testing.T) {
 	post("/paste", url.Values{"career_text": {"I help prepare rooms for events."}})
 	post("/begin", url.Values{"approach": {"focused"}})
 	body := post("/answer", url.Values{"answer": {"I help prepare rooms for events."}})
-	if strings.Contains(body, "SOMETHING WORTH RECOGNIZING") {
+	if strings.Contains(body, "POTENTIAL DISCOVERY") {
 		t.Fatal("revealed without a proposal")
 	}
 	body = post("/answer", url.Values{"answer": {statement}})
-	for _, want := range []string{"SOMETHING WORTH RECOGNIZING", "Potential strength: Attention to detail", "Since then I read the layout sheet aloud with a second staff member before doors open.", "What happened next?", `action="/answer"`} {
+	for _, want := range []string{"POTENTIAL DISCOVERY", "Potential strength: Attention to detail", "Since then I read the layout sheet aloud with a second staff member before doors open.", "Review potential discovery", `id="portrait-detail" open`, "What happened next?", `action="/answer"`} {
 		if !strings.Contains(body, want) {
 			t.Errorf("missing %q", want)
 		}
@@ -463,8 +463,8 @@ func TestProgressiveDiscoveryConversation(t *testing.T) {
 		t.Fatal("unreviewed factual claim or acceptance leaked")
 	}
 	body = post("/answer", url.Values{"answer": {"We checked the sheet together."}})
-	if strings.Contains(body, "SOMETHING WORTH RECOGNIZING") || !strings.Contains(body, "Why did you choose to check together?") {
-		t.Fatal("repeat reveal or conversation stopped")
+	if !strings.Contains(body, "Review potential discovery") || !strings.Contains(body, "Why did you choose to check together?") {
+		t.Fatal("discovery or conversation stopped")
 	}
 	post("/reveal", nil)
 	post("/review", nil)

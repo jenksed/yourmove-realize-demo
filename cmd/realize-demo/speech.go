@@ -228,8 +228,11 @@ func safeProviderRequestID(s string) string {
 // speak synthesizes only the question supplied from the locked session.
 func speak(w http.ResponseWriter, r *http.Request, question, voice string) {
 	voiceID := env("FISH_AUDIO_VOICE_ID", "e3cd384158934cc9a01029cd7d278634")
-	if voice == "masculine" {
+	switch voice {
+	case "masculine":
 		voiceID = env("FISH_AUDIO_MASCULINE_VOICE_ID", "bf322df2096a46f18c579d0baa36f41d")
+	case "hannah":
+		voiceID = env("FISH_AUDIO_HANNAH_VOICE_ID", "9a9cf47702da476aa4629e2506d4a857")
 	}
 	key := strings.TrimSpace(os.Getenv("FISH_AUDIO_API_KEY"))
 	if key == "" {
